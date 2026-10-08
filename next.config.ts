@@ -1,4 +1,11 @@
 import type { NextConfig } from "next";
+import { validateEnv } from "./src/lib/env";
+
+// Validasi seluruh Environment Variables wajib saat proses build (di Vercel maupun lokal)
+const isBuild =
+  process.argv.includes("build") ||
+  process.env.NEXT_PHASE === "phase-production-build";
+validateEnv({ isBuild });
 
 const nextConfig: NextConfig = {
   /* config options here */
