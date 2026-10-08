@@ -1,0 +1,87 @@
+@import "tailwindcss";
+@source "../../node_modules/flowbite-react";
+
+:root {
+  --karbon: #010736;
+  --kertas: #0D1C42;
+  --kertas-nota: #FCF1D0;
+  --tinta: #FCF1D0;
+  --tinta-dark: #010736;
+  --tinta-pudar: #8CA0D0;
+  --pulpen: #22396F;
+  --kuning: #FCF1D0;
+  --kresek: #FF7EB6;
+  --cendol: #2BD67B;
+  --stempel: #E63946;
+  --langit: #6EC6FF;
+  --bayangan: #00031A;
+  --fokus: #FCF1D0;
+}
+
+@theme {
+  --color-karbon: var(--karbon);
+  --color-kertas: var(--kertas);
+  --color-kertas-nota: var(--kertas-nota);
+  --color-tinta: var(--tinta);
+  --color-tinta-dark: var(--tinta-dark);
+  --color-tinta-pudar: var(--tinta-pudar);
+  --color-pulpen: var(--pulpen);
+  --color-kuning: var(--kuning);
+  --color-kresek: var(--kresek);
+  --color-cendol: var(--cendol);
+  --color-stempel: var(--stempel);
+  --color-langit: var(--langit);
+  --color-bayangan: var(--bayangan);
+  --color-fokus: var(--fokus);
+
+  /* Kategori (DESIGN.md 3.1) */
+  --color-cat-food: #FF9F45;
+  --color-cat-transport: #6EC6FF;
+  --color-cat-shopping: #FF7EB6;
+  --color-cat-bills: #B9C0FF;
+  --color-cat-entertainment: #FFD23F;
+  --color-cat-health: #2BD67B;
+  --color-cat-education: #C8E36B;
+  --color-cat-other: #D9DBF0;
+
+  --shadow-hard: 4px 4px 0 0 var(--bayangan);
+  --shadow-hard-sm: 2px 2px 0 0 var(--bayangan);
+  --shadow-hard-lg: 6px 6px 0 0 var(--bayangan);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+body {
+  background: var(--karbon);
+  color: var(--tinta);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+/* Contrast safeguard: All light/cream elements must have dark (#010736) text and icons */
+.bg-kuning,
+.bg-kertas-nota {
+  color: var(--karbon) !important;
+}
+
+button.bg-kuning,
+a.bg-kuning,
+button.bg-kertas-nota,
+a.bg-kertas-nota {
+  color: var(--karbon) !important;
+}
+
+button.bg-kuning svg,
+a.bg-kuning svg,
+button.bg-kertas-nota svg,
+a.bg-kertas-nota svg {
+  color: var(--karbon) !important;
+  fill: currentColor !important;
+}
+
+button.bg-kuning span,
+a.bg-kuning span,
+button.bg-kertas-nota span,
+a.bg-kertas-nota span {
+  color: var(--karbon) !important;
+}

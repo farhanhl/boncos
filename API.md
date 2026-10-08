@@ -2,22 +2,18 @@
 
 Semua endpoint (kecuali `/api/auth/session`) memerlukan session cookie valid. `uid` selalu dari session, **bukan** dari input. Respons error seragam: `{ ok: false, error: CODE, message }`.
 
+> **Ekstraksi gambar tidak punya endpoint.** OCR dan parsing berjalan di browser (lihat `EXTRACTION.md`); gambar dan teks hasil OCR tidak pernah dikirim ke server. Server hanya menerima data final yang sudah direview user lewat `createExpense`.
+
 ## Route Handler
 
 ### `POST /api/auth/session`
 - Body: `{ idToken }` → verifikasi → set session cookie. `DELETE` menghapus cookie.
 
-### `POST /api/extract`
-- Body: `multipart/form-data`, field `image` (File).
-- Gambar diproses di memori dan **tidak disimpan**. Proses: lihat `AI_EXTRACTION.md`.
-- 200: `{ ok: true, extraction }`
-- 4xx: `INVALID_FILE` (400), `UNAUTHENTICATED` (401), `NOT_AN_EXPENSE` (422), `RATE_LIMITED` (429), `EXTRACTION_FAILED` (502).
-
 ## Server Actions (`src/actions/`)
 
 | Action | Input | Keterangan |
 |--------|-------|------------|
-| `createExpense` | `{ name, amount, currency, expense_date, category_id?, note?, source, ai_confidence? }` | Validasi Zod; isi `month`, `name_lower`, timestamp di server. Setelah sukses, jadwalkan `notifyTelegram()` via `after()` |
+| `createExpense` | `{ name, amount, currency, expense_date, category_id?, note?, source: 'manual'\|'scan', extraction_confidence? }` | Validasi Zod; `extraction_confidence` hanya diterima bila `source = 'scan'` (0–1); isi `month`, `name_lower`, timestamp di server. Setelah sukses, jadwalkan `notifyTelegram()` via `after()` |
 | `updateExpense` | `{ id, ...fields }` | Hanya dokumen di bawah `users/{uid}` |
 | `deleteExpense` | `{ id }` | Hapus dokumen |
 | `listExpenses` | `{ from?, to?, category_id?, q?, cursor?, limit? }` | Pagination `startAfter`; `q` = prefix search nama |
@@ -30,5 +26,6 @@ Semua endpoint (kecuali `/api/auth/session`) memerlukan session cookie valid. `u
 
 ## Aturan
 - Validasi input dengan Zod di setiap action; panggil `revalidatePath` setelah mutasi.
+- Server memvalidasi ulang semua nilai (nominal integer > 0, tanggal valid), tidak mempercayai hasil ekstraksi dari klien.
 - Jangan mengembalikan stack trace atau token ke klien.
 - `notifyTelegram()` tidak boleh melempar error ke pemanggil; tangkap, log tanpa data sensitif, selesai.

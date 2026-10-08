@@ -1,0 +1,8 @@
+{
+  "name": "Transfer ke John Doe",
+  "amount": 27500,
+  "expense_date": "2026-09-13",
+  "category_suggestion": "transfer",
+  "doc_type": "bank_transfer",
+  "status": "ok"
+}

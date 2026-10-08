@@ -1,0 +1,19 @@
+12.02 als Gp
+< Detail Pesanan
+Diterima Diproses Selesai
+Hb Kopi Nako Kota Bintang Dine-In ft TA6
+#26099ZVL236X
+13 Sep 2026, 8:28
+Ambil pesanan di counter dengan
+menunjukkan nomor order Anda.
+Metode Pembayaran
+== QRIS
+Kopi Nako x3 75.000
+Fresh Milk
+by Cup Ice
+Lemon Kocok x1 18.000
+by Cup Ice
+Subtotal 4 items 93.000
+PB1 (10%) 9.300
+Total 102.300
+Kamu mendapatkan @ 4 Poin Sobat

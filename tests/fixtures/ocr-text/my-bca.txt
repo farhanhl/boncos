@@ -1,0 +1,14 @@
+&BCA
+Transfer Successful
+08 Oct 2026 10:52:49
+IDR 10,000.00
+Beneficiary Name JOHN DOE
+Beneficiary Account 066 - 080 - 3173
+Transaction Type Transfer to BCA Account
+Transfer Currency IDR - Indonesian Rupiah
+Source of Fund 842 - 1** - **23,
+Source Currency IDR - Indonesian Rupiah
+Transfer Amount IDR10,000.00
+Remarks
+Reference No. 95271202610081052491
+51TRF1580784678

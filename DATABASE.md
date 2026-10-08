@@ -1,7 +1,7 @@
 # DATABASE (Firebase: Firestore + Auth)
 
 ## Prinsip
-- **Firestore** untuk data, **Firebase Auth** untuk login. **Tidak ada Cloud Storage**: gambar tidak pernah disimpan (hanya dibaca sekali oleh AI lalu dibuang).
+- **Firestore** untuk data, **Firebase Auth** untuk login. **Tidak ada Cloud Storage**: gambar tidak pernah disimpan maupun diunggah (OCR berjalan di browser).
 - Semua akses data dilakukan **dari server** (Server Actions / Route Handler) memakai **Firebase Admin SDK**. Klien tidak membaca/menulis Firestore langsung. Security Rules dipasang **deny all** sebagai lapisan pengaman tambahan.
 - Admin SDK mem-bypass Security Rules, jadi **isolasi antar-user dijamin oleh kode**: setiap query wajib di-scope ke `users/{uid}`, dan `uid` hanya boleh berasal dari session cookie terverifikasi (bukan input klien).
 
@@ -19,8 +19,8 @@ users/{uid}/expenses/{expenseId}
   month: string                    // 'YYYY-MM' (denormalisasi untuk query bulanan)
   category_id: string | null       // slug kategori default ('food') atau id dokumen kategori custom
   note: string | null
-  source: 'manual' | 'ai'
-  ai_confidence: number | null     // 0–1
+  source: 'manual' | 'scan'
+  extraction_confidence: number | null   // 0–1, hanya untuk source = 'scan'
   created_at: Timestamp
   updated_at: Timestamp
 
@@ -33,22 +33,13 @@ users/{uid}/settings/telegram         // satu dokumen, opsional
   bot_token_enc: string            // token terenkripsi AES-256-GCM (format "iv:tag:ciphertext", base64)
   bot_token_hint: string           // 4 karakter terakhir token, untuk tampilan "••••abcd"
   updated_at: Timestamp
-
-users/{uid}/extractionLogs/{logId}    // ditulis server saja
-  status: 'success' | 'not_expense' | 'error'
-  latency_ms: number
-  created_at: Timestamp
-  // JANGAN simpan isi gambar atau hasil ekstraksi di log
-
-rateLimits/{uid_hourBucket}           // ditulis server saja (transaksi increment)
-  count: number
-  expires_at: Timestamp               // aktifkan TTL policy pada field ini
 ```
+Tidak ada koleksi log ekstraksi atau rate limit: ekstraksi berjalan sepenuhnya di klien dan tidak menyentuh server.
 
 ### Kategori default
 Tidak disimpan di Firestore; konstanta di `src/lib/categories.ts` dengan id slug:
 `food` (Makanan & Minuman), `transport` (Transportasi), `shopping` (Belanja), `bills` (Tagihan), `entertainment` (Hiburan), `health` (Kesehatan), `education` (Pendidikan), `other` (Lainnya).
-Kategori custom disimpan di `users/{uid}/categories`. `category_suggestion` dari AI dipetakan ke slug ini.
+Kategori custom disimpan di `users/{uid}/categories`. `category_suggestion` dari parser memakai slug yang sama.
 
 ## Tipe Data
 - `amount` = **number integer**. Firestore menyimpan angka sebagai double (aman sampai 2^53), cukup untuk IDR. Validasi `Number.isSafeInteger(amount) && amount > 0` di server.
@@ -85,7 +76,7 @@ service cloud.firestore {
   }
 }
 ```
-> Alternatif jika kelak ingin akses langsung dari klien: buka `users/{uid}/**` dengan `request.auth.uid == uid` **kecuali** `settings/telegram` dan `extractionLogs` (tetap server-only), dan validasi bentuk field. Itu mengubah arsitektur; perbarui `ARCHITECTURE.md` lebih dulu.
+> Alternatif jika kelak ingin akses langsung dari klien: buka `users/{uid}/**` dengan `request.auth.uid == uid` **kecuali** `settings/telegram` (tetap server-only), dan validasi bentuk field. Itu mengubah arsitektur; perbarui `ARCHITECTURE.md` lebih dulu.
 
 ## Penghapusan
 - `deleteExpense`: hapus dokumen saja (tidak ada berkas terkait).

@@ -1,0 +1,14 @@
+Rp 42.000
+Diskon s.d. 10RB
+App Store
+Transaction Status A
+O Sent to Bank
+| 4 Oct 2026, 14:05
+Received by Recipient
+4 Oct 2026, 14:05
+Transfer Details
+Transfer From SENDER *****
+Transfer To JANE DOE
+SeaBank: 901932874764
+Transaction Time 04 Oct 2026, 14:05
+View More v

@@ -1,0 +1,8 @@
+{
+  "name": "Pln Prepaid",
+  "amount": 102500,
+  "expense_date": "2026-10-02",
+  "category_suggestion": "bills",
+  "doc_type": "receipt",
+  "status": "ok"
+}
