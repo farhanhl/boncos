@@ -55,15 +55,18 @@ export async function createSession(idToken: string): Promise<CreateSessionResul
     const expiresIn = days * 24 * 60 * 60 * 1000;
 
     const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn });
-    const cookieStore = await cookies();
-
-    cookieStore.set(SESSION_COOKIE_NAME, sessionCookie, {
-      maxAge: expiresIn / 1000,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    });
+    try {
+      const cookieStore = await cookies();
+      cookieStore.set(SESSION_COOKIE_NAME, sessionCookie, {
+        maxAge: expiresIn / 1000,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+      });
+    } catch {
+      // Cookie might be attached directly on response
+    }
 
     return { success: true, cookie: sessionCookie };
   } catch (error) {

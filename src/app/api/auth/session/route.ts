@@ -3,6 +3,8 @@ import { z } from "zod";
 import { createSession, removeSession, SESSION_COOKIE_NAME } from "@/lib/firebase/session";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const sessionSchema = z.object({
@@ -63,11 +65,13 @@ export async function POST(request: Request) {
         { status: 504 }
       );
     }
+    const errorMsg = err instanceof Error ? err.message : "Terjadi kesalahan pada server.";
+    console.error("[Session API Error]:", err);
     return NextResponse.json(
       {
         ok: false,
         error: "INTERNAL_ERROR",
-        message: "Terjadi kesalahan pada server.",
+        message: errorMsg,
       },
       { status: 500 }
     );

@@ -7,6 +7,8 @@ import {
 } from "@/actions/expenses";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 30;
 
 function handleTimeoutResponse(err: unknown) {

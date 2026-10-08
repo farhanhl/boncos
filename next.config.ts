@@ -9,6 +9,7 @@ validateEnv({ isBuild });
 
 const nextConfig: NextConfig = {
   /* config options here */
+  serverExternalPackages: ["firebase-admin"],
   experimental: {
     agentFeedback: true,
   },

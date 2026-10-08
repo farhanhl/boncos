@@ -9,6 +9,7 @@ import { sendTelegramScanResult } from "@/lib/telegram";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(request: Request) {

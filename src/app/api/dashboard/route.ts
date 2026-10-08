@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDashboardSummary } from "@/actions/dashboard";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function GET(request: Request) {
