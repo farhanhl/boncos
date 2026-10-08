@@ -169,6 +169,44 @@ export async function GET() {
     preview: currency,
   });
 
+  // 10. Live Initialization Test for Firebase Admin SDK
+  let adminTestStatus: "OK" | "MISSING" | "INVALID" = "OK";
+  let adminTestPreview = "Sedang diuji...";
+  let adminTestDetails: string | undefined;
+
+  try {
+    const { getAdminApp, getAdminAuth, lastInitError } = await import("@/lib/firebase/admin");
+    const app = getAdminApp();
+    const auth = getAdminAuth();
+    const hasCred = Boolean(app.options.credential);
+    if (app && auth && hasCred) {
+      adminTestStatus = "OK";
+      adminTestPreview = `Berhasil Inisialisasi (Project: ${app.options.projectId}, Kredensial Valid)`;
+    } else if (app && !hasCred) {
+      adminTestStatus = "INVALID";
+      adminTestPreview = `Fallback Tanpa Kredensial (Project: ${app.options.projectId})`;
+      adminTestDetails = lastInitError || "initializeApp gagal memuat cert({ clientEmail, privateKey }). Kunci privat atau email service account tidak dapat diproses.";
+    } else {
+      adminTestStatus = "INVALID";
+      adminTestPreview = "App atau Auth bernilai null/undefined";
+    }
+  } catch (err) {
+    adminTestStatus = "INVALID";
+    adminTestPreview = "Gagal Inisialisasi Firebase Admin";
+    adminTestDetails = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  }
+
+  items.push({
+    key: "FIREBASE_ADMIN_INIT_TEST",
+    name: "Uji Koneksi Firebase Admin SDK",
+    scope: "server",
+    required: true,
+    exists: true,
+    status: adminTestStatus,
+    preview: adminTestPreview,
+    details: adminTestDetails,
+  });
+
   const allRequiredOk = items.every((i) => !i.required || i.status === "OK");
 
   return NextResponse.json({

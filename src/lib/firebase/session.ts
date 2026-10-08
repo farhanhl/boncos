@@ -1,4 +1,3 @@
-import "server-only";
 import { cookies } from "next/headers";
 import { getAdminAuth } from "./admin";
 import { SESSION_COOKIE_NAME } from "./constants";

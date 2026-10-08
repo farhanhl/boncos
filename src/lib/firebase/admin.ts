@@ -1,4 +1,3 @@
-import "server-only";
 import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import {
@@ -9,7 +8,9 @@ import {
   type DocumentData,
 } from "firebase-admin/firestore";
 
-function getAdminApp(): App {
+export let lastInitError: string | null = null;
+
+export function getAdminApp(): App {
   const apps = getApps();
   if (apps.length > 0 && apps[0]) {
     return apps[0];
@@ -44,9 +45,11 @@ function getAdminApp(): App {
         projectId,
       });
     } catch (err) {
+      lastInitError = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
       console.error("[Firebase Admin] Gagal inisialisasi credential cert:", err);
     }
   } else {
+    lastInitError = `Variabel belum lengkap: clientEmail=${Boolean(clientEmail)}, privateKey=${Boolean(privateKey)}`;
     console.error(
       `[Firebase Admin] Environment variable belum lengkap di Vercel: clientEmail=${Boolean(
         clientEmail

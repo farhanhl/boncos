@@ -99,3 +99,7 @@ export async function DELETE() {
     );
   }
 }
+
+export async function GET() {
+  return NextResponse.json({ ok: true, message: "Session endpoint is alive" });
+}
