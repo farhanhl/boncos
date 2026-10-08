@@ -2,16 +2,6 @@
 
 <div align="center">
 
-```
-  ____   ____  _   _  ____ ___  ____  
- | __ ) / __ \| \ | |/ ___/ _ \/ ___| 
- |  _ \| |  | |  \| | |  | | | \___ \ 
- | |_) | |__| | |\  | |__| |_| |___) |
- |____/ \____/|_| \_|\____\___/|____/ 
-                                      
-    ~ NOTA WARUNG KETEMU STIKER LAPTOP ~
-```
-
 **Aplikasi pencatatan keuangan sat-set buat anak muda yang capek boncos.**  
 *Foto struk ➔ angka kebaca ➔ cap simpan, kurang dari 10 detik.*
 
@@ -49,6 +39,7 @@ Pernah nggak abis nongkrong atau belanja bulanan, niat mau nyatet pengeluaran ta
 | 📊 **Breakdown Pengeluaran** | Visualisasi kategori dengan palet stiker distro & chart donat yang ramah mata. |
 | ✈️ **Alert Telegram (Opsional)** | Kirim notifikasi ringkasan otomatis ke bot Telegram pribadimu setiap kali pengeluaran berhasil disimpan. Token bot dienkripsi aman (AES-256-GCM). |
 | 📥 **Export CSV** | Mau analisa lebih dalam di Excel atau Google Sheets? Sekali klik langsung terunduh. |
+| 📖 **Swagger / OpenAPI 3.0** | Dokumentasi API dan Server Action interaktif di `/docs` lengkap dengan skema data Zod. |
 
 ---
 

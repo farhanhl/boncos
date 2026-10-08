@@ -4,6 +4,7 @@ import { getDashboardSummary } from "@/actions/dashboard";
 import { HeroNota } from "@/components/dashboard/HeroNota";
 import { CategoryBreakdownChart } from "@/components/dashboard/CategoryBreakdownChart";
 import { RecentExpensesList } from "@/components/dashboard/RecentExpensesList";
+import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +12,18 @@ export const metadata = {
   title: "Beranda — Boncos",
 };
 
-export default async function DashboardPage() {
-  const summaryRes = await getDashboardSummary();
+interface DashboardPageProps {
+  searchParams: Promise<{ month?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const resolvedParams = await searchParams;
+  const targetMonth = resolvedParams.month;
+
+  const summaryRes = await getDashboardSummary(targetMonth);
   const data = summaryRes.ok && summaryRes.data ? summaryRes.data : null;
 
+  const activeMonth = data?.currentMonth || targetMonth || new Date().toISOString().slice(0, 7);
   const currentTotal = data?.currentMonthTotal || 0;
   const topExpenses = data?.topExpenses || [];
   const recentExpenses = data?.recentExpenses || [];
@@ -53,6 +62,9 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* Month & Year Filter Picker */}
+      <MonthYearPicker currentMonth={activeMonth} />
+
       {/* Main Grid: Desktop 5/12 Left, 7/12 Right (DESIGN.md Section 6) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Kolom Kiri: Nota Hero (lg:col-span-5) */}
@@ -62,6 +74,7 @@ export default async function DashboardPage() {
             total={currentTotal}
             diffAmount={diffAmount}
             diffType={diffType}
+            month={activeMonth}
           />
         </div>
 

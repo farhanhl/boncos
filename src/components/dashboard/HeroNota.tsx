@@ -6,19 +6,47 @@ interface HeroNotaProps {
   total: number;
   diffAmount: number;
   diffType: "boncos" | "hemat" | "same";
+  month?: string;
 }
+
+const MONTH_NAMES = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
 
 export function HeroNota({
   topExpenses,
   total,
   diffAmount,
   diffType,
+  month,
 }: HeroNotaProps) {
+  let periodTitle = "Nota Bulan Ini";
+  if (month) {
+    const [y, m] = month.split("-");
+    const mIdx = parseInt(m || "1", 10) - 1;
+    if (MONTH_NAMES[mIdx]) {
+      periodTitle = `Nota ${MONTH_NAMES[mIdx]} ${y}`;
+    }
+  }
+
   return (
     <div className="relative bg-kertas-nota border-2 border-tinta-dark rounded-t-[10px] p-6 shadow-hard w-full max-w-lg mx-auto text-tinta-dark">
-      <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-dashed border-tinta-dark/30">
-        <h2 className="font-display text-2xl text-tinta-dark">Nota Bulan Ini</h2>
-        <span className="text-xs font-bold text-tinta-dark/70 uppercase tracking-wider">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 pb-3 mb-3 border-b-2 border-dashed border-tinta-dark/30">
+        <h2 className="font-display text-xl sm:text-2xl text-tinta-dark">
+          {periodTitle}
+        </h2>
+        <span className="text-xs font-bold text-tinta-dark/70 uppercase tracking-wider shrink-0">
           Pengeluaran Terbesar
         </span>
       </div>
@@ -26,7 +54,7 @@ export function HeroNota({
       {/* Daftar Baris Pengeluaran Terbesar */}
       {topExpenses.length === 0 ? (
         <div className="py-8 text-center text-tinta-dark/60 text-sm">
-          Belum ada jajan tercatat bulan ini.
+          Belum ada jajan tercatat pada periode ini.
         </div>
       ) : (
         <div className="space-y-2 mb-6">

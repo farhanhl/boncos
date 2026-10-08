@@ -1,16 +1,22 @@
+import { getUserIngestionKey } from "@/actions/ingestion";
 import { getTelegramSettings } from "@/actions/notifications";
-import { TelegramSettingsForm } from "@/components/settings/TelegramSettingsForm";
+import { ApiKeyManager } from "@/components/settings/ApiKeyManager";
 import { SettingsSubnav } from "@/components/settings/SettingsSubnav";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Notifikasi Telegram — Boncos",
+  title: "Kode Unik & Webhook Scan — Boncos",
 };
 
-export default async function TelegramSettingsPage() {
-  const res = await getTelegramSettings();
-  const settings = res.ok && res.data ? res.data : null;
+export default async function ApiSettingsPage() {
+  const [keyRes, telegramRes] = await Promise.all([
+    getUserIngestionKey(),
+    getTelegramSettings(),
+  ]);
+
+  const keyData = keyRes.ok && keyRes.data ? keyRes.data : null;
+  const telegramEnabled = Boolean(telegramRes.ok && telegramRes.data?.enabled);
 
   return (
     <main className="space-y-6 max-w-2xl mx-auto">
@@ -25,7 +31,10 @@ export default async function TelegramSettingsPage() {
 
       <SettingsSubnav />
 
-      <TelegramSettingsForm initialSettings={settings} />
+      <ApiKeyManager
+        initialKeyData={keyData}
+        telegramEnabled={telegramEnabled}
+      />
     </main>
   );
 }

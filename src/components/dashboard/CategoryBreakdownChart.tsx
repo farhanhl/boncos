@@ -51,7 +51,7 @@ export function CategoryBreakdownChart({
                     width: `${barWidthPercent}%`,
                     backgroundColor: cat.color,
                   }}
-                  className="h-full border-r-2 border-tinta flex items-center px-2 text-[11px] font-bold text-tinta truncate transition-all duration-300"
+                  className="h-full border-r-2 border-tinta flex items-center px-2 text-[11px] font-bold text-karbon truncate transition-all duration-300"
                 >
                   {formatRupiahCompact(cat.total)}
                 </div>

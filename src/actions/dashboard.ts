@@ -45,10 +45,9 @@ export async function getDashboardSummary(
 
     const expensesCol = userCol(user.uid, "expenses");
 
-    // Fetch this month expenses
+    // Fetch this month expenses (single-field query on 'month' - no composite index required)
     const thisMonthSnap = await expensesCol
       .where("month", "==", currentMonth)
-      .orderBy("amount", "desc")
       .get();
 
     // Fetch last month expenses
@@ -95,33 +94,42 @@ export async function getDashboardSummary(
       });
     });
 
-    // Top 4 expenses for hero nota
-    const topExpenses = thisMonthExpenses.slice(0, 4);
+    // Top 4 expenses for hero nota (sorted by amount descending in memory)
+    const topExpenses = [...thisMonthExpenses]
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 4);
 
-    // Recent 5 expenses
-    const recentExpensesSnap = await expensesCol
-      .orderBy("expense_date", "desc")
-      .limit(5)
-      .get();
+    // Recent 5 expenses (try fetching recent, or fallback to in-memory)
+    let recentExpenses: ExpenseRecord[] = [];
+    try {
+      const recentExpensesSnap = await expensesCol
+        .orderBy("expense_date", "desc")
+        .limit(5)
+        .get();
 
-    const recentExpenses: ExpenseRecord[] = recentExpensesSnap.docs.map((doc) => {
-      const d = doc.data();
-      return {
-        id: doc.id,
-        name: d.name,
-        name_lower: d.name_lower,
-        amount: d.amount || 0,
-        currency: d.currency || "IDR",
-        expense_date: d.expense_date,
-        month: d.month,
-        category_id: d.category_id || null,
-        note: d.note || null,
-        source: d.source || "manual",
-        extraction_confidence: d.extraction_confidence ?? null,
-        created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : new Date().toISOString(),
-        updated_at: d.updated_at?.toDate ? d.updated_at.toDate().toISOString() : new Date().toISOString(),
-      };
-    });
+      recentExpenses = recentExpensesSnap.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          name: d.name,
+          name_lower: d.name_lower,
+          amount: d.amount || 0,
+          currency: d.currency || "IDR",
+          expense_date: d.expense_date,
+          month: d.month,
+          category_id: d.category_id || null,
+          note: d.note || null,
+          source: d.source || "manual",
+          extraction_confidence: d.extraction_confidence ?? null,
+          created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : new Date().toISOString(),
+          updated_at: d.updated_at?.toDate ? d.updated_at.toDate().toISOString() : new Date().toISOString(),
+        };
+      });
+    } catch {
+      recentExpenses = [...thisMonthExpenses]
+        .sort((a, b) => b.expense_date.localeCompare(a.expense_date))
+        .slice(0, 5);
+    }
 
     // Breakdown array sorted by total
     const categoryBreakdown: CategorySummaryItem[] = Array.from(catMap.entries())
@@ -153,7 +161,8 @@ export async function getDashboardSummary(
         categoryBreakdown,
       },
     };
-  } catch {
+  } catch (err) {
+    console.error("[getDashboardSummary Error]:", err);
     return { ok: false, message: "Gagal memuat ringkasan dashboard." };
   }
 }

@@ -212,6 +212,63 @@ export async function sendTelegramNotificationForExpense(
   }
 }
 
+export interface ScanNotificationOptions {
+  success: boolean;
+  errorReason?: string;
+  expense?: {
+    name: string;
+    amount: number;
+    expense_date: string;
+    category_id: string | null;
+  };
+}
+
+/**
+ * Sends a webhook scan result notification (success or failure) to the user's Telegram.
+ */
+export async function sendTelegramScanResult(
+  uid: string,
+  options: ScanNotificationOptions
+): Promise<void> {
+  try {
+    const settingsDoc = await userCol<TelegramSettingsDoc>(uid, "settings")
+      .doc("telegram")
+      .get();
+
+    if (!settingsDoc.exists) return;
+    const settings = settingsDoc.data();
+    if (!settings || !settings.enabled || !settings.bot_token_enc || !settings.chat_id) {
+      return;
+    }
+
+    const token = decryptText(settings.bot_token_enc);
+
+    let messageHtml = "";
+    if (options.success && options.expense) {
+      const categoryInfo = getCategoryById(options.expense.category_id);
+      messageHtml = [
+        "🧾 <b>Pencatatan Struk Berhasil!</b>",
+        `Nama: <b>${escapeHtml(options.expense.name)}</b>`,
+        `Nominal: <b>${escapeHtml(formatRupiah(options.expense.amount))}</b>`,
+        `Tanggal: ${escapeHtml(options.expense.expense_date)}`,
+        `Kategori: ${escapeHtml(categoryInfo.name)}`,
+        `Metode: <i>Webhook Scan Otomatis</i>`,
+      ].join("\n");
+    } else {
+      messageHtml = [
+        "⚠️ <b>Pencatatan Struk Gagal</b>",
+        `Alasan: <b>${escapeHtml(options.errorReason || "Format struk tidak terbaca atau nominal tidak ditemukan")}</b>`,
+        "",
+        "<i>Tips: Pastikan foto struk memiliki pencahayaan cukup, tidak blur, dan memuat total nominal transaksi.</i>",
+      ].join("\n");
+    }
+
+    await sendTelegramMessage(token, settings.chat_id, messageHtml);
+  } catch {
+    // Best effort catch: never rethrow or log sensitive credentials
+  }
+}
+
 /**
  * Sends a raw HTML message via Telegram Bot API with 429 retry support.
  */

@@ -1,5 +1,6 @@
 import { listCustomCategories } from "@/actions/categories";
 import { CategoryManager } from "@/components/settings/CategoryManager";
+import { SettingsSubnav } from "@/components/settings/SettingsSubnav";
 
 export const dynamic = "force-dynamic";
 
@@ -12,15 +13,17 @@ export default async function CategoriesSettingsPage() {
   const customCategories = res.ok && res.data ? res.data : [];
 
   return (
-    <main className="space-y-6">
-      <div className="text-center sm:text-left max-w-2xl mx-auto">
+    <main className="space-y-6 max-w-2xl mx-auto">
+      <div className="text-center sm:text-left">
         <h1 className="font-display text-3xl md:text-4xl text-tinta">
-          Kelola Kategori
+          Pengaturan
         </h1>
         <p className="text-sm text-tinta-pudar mt-1">
-          Daftar kategori pengeluaran untuk mengelompokkan catatan jajanmu.
+          Kelola kategori, bot notifikasi, dan kode unik integrasi webhook scan.
         </p>
       </div>
+
+      <SettingsSubnav />
 
       <CategoryManager customCategories={customCategories} />
     </main>

@@ -9,6 +9,7 @@ import {
   PiTagBold,
   PiGearBold,
   PiSignOutBold,
+  PiFileCodeBold,
 } from "react-icons/pi";
 import { signOut } from "firebase/auth";
 import { getClientAuth } from "@/lib/firebase/client";
@@ -68,6 +69,8 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
             const isActive =
               item.href === "/dashboard"
                 ? pathname === "/dashboard"
+                : item.href === "/settings/notifications"
+                ? pathname.startsWith("/settings") && !pathname.startsWith("/settings/categories")
                 : pathname.startsWith(item.href);
             const Icon = item.icon;
 
@@ -87,6 +90,17 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
             );
           })}
         </nav>
+
+        {/* Developer Swagger Docs link */}
+        <div className="pt-2 mb-2">
+          <Link
+            href="/docs"
+            className="flex items-center gap-2 text-xs font-bold text-tinta-pudar hover:text-tinta px-3 py-2 rounded-md hover:bg-karbon/40 transition-colors"
+          >
+            <PiFileCodeBold className="text-base" />
+            <span>Swagger API Docs</span>
+          </Link>
+        </div>
 
         {/* User profile & Logout */}
         <div className="pt-4 border-t-2 border-dashed border-tinta/30 flex items-center justify-between">
@@ -160,7 +174,7 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
         <Link
           href="/settings/notifications"
           className={`flex flex-col items-center justify-center p-1 rounded-md ${
-            pathname.startsWith("/settings/notifications")
+            pathname.startsWith("/settings") && !pathname.startsWith("/settings/categories")
               ? "text-pulpen font-bold"
               : "text-tinta"
           }`}

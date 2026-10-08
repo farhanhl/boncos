@@ -91,7 +91,7 @@ export function TelegramSettingsForm({
   };
 
   return (
-    <div className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard max-w-xl mx-auto">
+    <div className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard w-full">
       {/* Title + Toggle Switch (DESIGN.md 4 & 5.8) */}
       <div className="flex items-center justify-between pb-4 border-b-2 border-dashed border-tinta/30">
         <div>

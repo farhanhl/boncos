@@ -85,3 +85,15 @@ button.bg-kertas-nota span,
 a.bg-kertas-nota span {
   color: var(--karbon) !important;
 }
+
+/* Custom chevron for all select elements: positioned further to the left from right border */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23FCF1D0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.95rem center;
+  background-size: 1.15rem 1.15rem;
+  padding-right: 2.5rem !important;
+}

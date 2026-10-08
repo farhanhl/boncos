@@ -1,0 +1,869 @@
+openapi: 3.0.3
+info:
+  title: Boncos — Nota Kalcer API
+  version: 1.0.0
+  description: >
+    Dokumentasi REST API interaktif untuk **Boncos**, aplikasi pencatatan keuangan pribadi neobrutalisme Gen Z berbasis Next.js 15 dan Firebase.
+
+    ### 🛡️ Catatan Keamanan & Batasan:
+    - **Batas Waktu Eksekusi (Timeout):** Setiap endpoint memiliki batas waktu maksimal **30 detik** (`maxDuration = 30s`), mengembalikan status HTTP 504 jika proses melebihi batas waktu.
+    - **Isolasi User:** Setiap pengguna diisolasi via `uid` dari session cookie Firebase (`__session`) atau kode unik ingest (`key`). Tidak ada parameter `uid` dari request body atau query.
+    - **Uang Selalu Integer:** Nominal uang selalu bilangan bulat rupiah tanpa desimal.
+    - **Enkripsi Telegram:** Bot Token Telegram dienkripsi dengan AES-256-GCM sebelum disimpan di database dan tidak pernah diekspos ke klien.
+
+servers:
+  - url: /
+    description: Server Aktif (Current Origin)
+  - url: http://localhost:3000
+    description: Server Development Lokal
+
+tags:
+  - name: Auth & Session
+    description: Pengelolaan sesi login berbasis session cookie Firebase terverifikasi
+  - name: Expenses (Pengeluaran)
+    description: Operasi pencatatan, pembaruan, penghapusan, dan riwayat pengeluaran
+  - name: Dashboard (Beranda)
+    description: Ringkasan metrik bulanan, nota hero, komparasi, dan visualisasi kategori
+  - name: Categories (Kategori)
+    description: Pengelolaan kategori kustom pengguna
+  - name: Telegram Settings
+    description: Konfigurasi notifikasi Telegram dan pengiriman pesan uji coba
+  - name: Scan & Webhook
+    description: Endpoint pemindaian struk otomatis headless via kode unik tanpa session cookie
+
+paths:
+  /api/auth/session:
+    post:
+      tags:
+        - Auth & Session
+      summary: Buat Sesi Login (Set Session Cookie)
+      description: Menerima Firebase ID Token dari autentikasi klien, memverifikasinya melalui Firebase Admin SDK, lalu menerbitkan session cookie `__session` (HttpOnly, Secure, SameSite=Lax, durasi 5 hari).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionInput'
+      responses:
+        '200':
+          description: Sesi berhasil dibuat, Set-Cookie header dikirimkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: ID Token tidak disertakan atau format tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: ID Token tidak valid atau kadaluarsa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Terjadi kesalahan pada server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Auth & Session
+      summary: Hapus Sesi Login (Logout)
+      description: Menghapus cookie sesi `__session` sehingga user keluar dari aplikasi.
+      responses:
+        '200':
+          description: Sesi berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/expenses:
+    get:
+      tags:
+        - Expenses (Pengeluaran)
+      summary: Ambil Daftar Pengeluaran
+      description: Mengambil daftar transaksi pengeluaran milik user dengan dukungan filter tanggal rentang (`from`, `to`), filter kategori (`category_id`), pencarian nama (`q`), dan limit.
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2026-10-01'
+          description: Batas awal tanggal pengeluaran (YYYY-MM-DD)
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2026-10-31'
+          description: Batas akhir tanggal pengeluaran (YYYY-MM-DD)
+        - name: category_id
+          in: query
+          required: false
+          schema:
+            type: string
+            example: food
+          description: ID kategori pengeluaran
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            example: kopi
+          description: Pencarian nama pengeluaran (case-insensitive)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+          description: Jumlah maksimal transaksi per query
+      responses:
+        '200':
+          description: Daftar transaksi pengeluaran berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      expenses:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ExpenseRecord'
+        '401':
+          description: Belum login / session cookie tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Expenses (Pengeluaran)
+      summary: Simpan Pengeluaran Baru
+      description: Menyimpan data transaksi pengeluaran baru. Server memvalidasi ulang nominal (integer > 0) dan tanggal, mengisikan `month` ('YYYY-MM'), `name_lower`, dan server timestamp. Menjadwalkan notifikasi Telegram via `after()` bila aktif.
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExpenseInput'
+      responses:
+        '200':
+          description: Pengeluaran berhasil disimpan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: exp_abc123xyz
+        '400':
+          description: Validasi Zod gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Sesi tidak valid / belum login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Expenses (Pengeluaran)
+      summary: Perbarui Pengeluaran
+      description: Memperbarui rincian pengeluaran yang sudah tersimpan milik pengguna yang sedang login.
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExpenseInput'
+      responses:
+        '200':
+          description: Pengeluaran berhasil diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: exp_abc123xyz
+        '400':
+          description: Input tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Sesi tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Expenses (Pengeluaran)
+      summary: Hapus Pengeluaran
+      description: Menghapus dokumen pengeluaran berdasarkan ID (lewat query param `?id=...` atau request body).
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: id
+          in: query
+          required: false
+          schema:
+            type: string
+            example: exp_abc123xyz
+          description: ID pengeluaran yang akan dihapus
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: exp_abc123xyz
+      responses:
+        '200':
+          description: Pengeluaran berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Sesi tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/dashboard:
+    get:
+      tags:
+        - Dashboard (Beranda)
+      summary: Ambil Ringkasan Metrik Dashboard
+      description: Menghasilkan data ringkasan dashboard untuk bulan tertentu (default bulan ini). Menyediakan total pengeluaran, perbandingan dengan bulan lalu, 4 pengeluaran terbesar (top expenses), 5 transaksi terakhir, dan rincian per kategori.
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: month
+          in: query
+          required: false
+          schema:
+            type: string
+            example: '2026-10'
+          description: Bulan yang ingin dianalisis dalam format YYYY-MM
+      responses:
+        '200':
+          description: Data dashboard berhasil dihitung
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DashboardSummaryData'
+        '401':
+          description: Belum login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/categories:
+    get:
+      tags:
+        - Categories (Kategori)
+      summary: Ambil Daftar Kategori Kustom
+      description: Mengambil seluruh kategori kustom yang dibuat pengguna.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Daftar kategori kustom berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomCategoryRecord'
+        '401':
+          description: Belum login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Categories (Kategori)
+      summary: Buat Kategori Kustom Baru
+      description: Menambahkan kategori baru dengan nama dan warna stiker heksadesimal.
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - color
+              properties:
+                name:
+                  type: string
+                  example: Hewan Peliharaan
+                color:
+                  type: string
+                  example: '#FF7EB6'
+                icon:
+                  type: string
+                  default: PiTagBold
+      responses:
+        '200':
+          description: Kategori berhasil dibuat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: cat_pet123
+        '400':
+          description: Validasi nama atau format warna gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Categories (Kategori)
+      summary: Hapus Kategori Kustom
+      description: Menghapus kategori kustom pengguna (lewat query param `?id=...` atau body).
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: id
+          in: query
+          required: false
+          schema:
+            type: string
+            example: cat_pet123
+          description: ID kategori yang akan dihapus
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: cat_pet123
+      responses:
+        '200':
+          description: Kategori berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/telegram:
+    get:
+      tags:
+        - Telegram Settings
+      summary: Ambil Konfigurasi Notifikasi Telegram
+      description: Mengambil konfigurasi notifikasi Telegram pengguna. Token bot asli tidak pernah dikembalikan ke klien; hanya petunjuk 4 karakter terakhir (`bot_token_hint`).
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Pengaturan Telegram ditemukan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/TelegramSettingsView'
+        '401':
+          description: Belum login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Telegram Settings
+      summary: Simpan Konfigurasi Telegram
+      description: Menyimpan pengaturan notifikasi Telegram. Memvalidasi token ke Telegram API (`getMe`), mengenkripsi token menggunakan kunci rahasia server (AES-256-GCM), lalu menyimpannya ke Firestore.
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - enabled
+                - chat_id
+              properties:
+                enabled:
+                  type: boolean
+                  example: true
+                chat_id:
+                  type: string
+                  example: '-1001234567890'
+                bot_token:
+                  type: string
+                  example: '123456789:ABCdefGHIjklMNOpqrSTUvwxYZ'
+      responses:
+        '200':
+          description: Pengaturan Telegram berhasil disimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Token bot Telegram atau Chat ID tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Telegram Settings
+      summary: Hapus Konfigurasi Telegram
+      description: Menghapus konfigurasi dan token Telegram pengguna dari Firestore.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Pengaturan Telegram berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/telegram/test:
+    post:
+      tags:
+        - Telegram Settings
+      summary: Kirim Pesan Uji Coba Telegram
+      description: Mengirimkan pesan ringkasan uji coba langsung ke channel atau grup Telegram pengguna menggunakan token yang tersimpan.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Pesan uji coba berhasil dikirim
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Pesan uji coba berhasil dikirim ke Telegram!
+        '400':
+          description: Gagal mengirim pesan (misal: bot belum dimasukkan sebagai admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/scan:
+    post:
+      tags:
+        - Scan & Webhook
+      summary: Scan Struk & Auto Catat via Kode Unik (Headless Ingestion)
+      description: Endpoint publik tanpa autentikasi cookie session. Menerima gambar struk dan kode unik rahasia user (`key`). Gambar diproses OCR di memori server secara aman (tanpa disimpan ke storage/disk). Jika berhasil, pengeluaran otomatis dicatat dan dilaporkan ke Telegram (jika terhubung). Jika gagal, mengembalikan rincian error dan mengirim notifikasi kegagalan ke Telegram.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - key
+                - image
+              properties:
+                key:
+                  type: string
+                  description: Kode unik pengguna yang diperoleh dari menu Pengaturan -> Kode Unik & Scan API
+                  example: bnc_9a7d8e6c4b2a1f0e3d5c7b9a
+                image:
+                  type: string
+                  format: binary
+                  description: Berkas gambar struk belanja (JPEG, PNG, WebP maksimal 10MB)
+      responses:
+        '200':
+          description: Struk berhasil dipindai dan dicatat ke sistem
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Struk berhasil discan dan dicatat ke pengeluaran.
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: exp_abc123
+                      name:
+                        type: string
+                        example: Kopi Nako
+                      amount:
+                        type: integer
+                        example: 102300
+                      expense_date:
+                        type: string
+                        example: '2026-09-13'
+                      category_id:
+                        type: string
+                        example: food
+                      confidence:
+                        type: number
+                        example: 0.89
+        '400':
+          description: File gambar tidak disertakan atau ukuran melebihi batas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Kode unik (key) tidak valid atau tidak disertakan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Struk tidak terbaca atau nominal tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Terjadi kesalahan sistem saat pemrosesan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: __session
+      description: Firebase Auth Session Cookie terverifikasi (HttpOnly)
+
+  schemas:
+    CreateSessionInput:
+      type: object
+      required:
+        - idToken
+      properties:
+        idToken:
+          type: string
+          description: JWT ID Token dari Firebase Client SDK
+          example: eyJhbGciOiJSUzI1NiIsImtpZCI...
+
+    CreateExpenseInput:
+      type: object
+      required:
+        - name
+        - amount
+        - expense_date
+        - source
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: Kopi Nako Kota Bintang
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 1000000000
+          example: 102300
+        currency:
+          type: string
+          default: IDR
+          example: IDR
+        expense_date:
+          type: string
+          format: date
+          example: '2026-10-08'
+        category_id:
+          type: string
+          nullable: true
+          example: food
+        note:
+          type: string
+          nullable: true
+          maxLength: 300
+          example: Nongkrong sore bareng teman
+        source:
+          type: string
+          enum:
+            - manual
+            - scan
+          example: scan
+        extraction_confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          nullable: true
+          example: 0.95
+
+    UpdateExpenseInput:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          example: exp_abc123xyz
+        name:
+          type: string
+          example: Indomaret Point
+        amount:
+          type: integer
+          example: 24500
+        expense_date:
+          type: string
+          format: date
+          example: '2026-10-08'
+        category_id:
+          type: string
+          example: shopping
+        note:
+          type: string
+          nullable: true
+          example: Beli camilan
+
+    ExpenseRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          example: exp_abc123xyz
+        name:
+          type: string
+          example: Transfer ke John Doe
+        name_lower:
+          type: string
+          example: transfer ke john doe
+        amount:
+          type: integer
+          example: 27500
+        currency:
+          type: string
+          example: IDR
+        expense_date:
+          type: string
+          example: '2026-10-08'
+        month:
+          type: string
+          example: '2026-10'
+        category_id:
+          type: string
+          nullable: true
+          example: transfer
+        note:
+          type: string
+          nullable: true
+          example: null
+        source:
+          type: string
+          enum:
+            - manual
+            - scan
+          example: scan
+        extraction_confidence:
+          type: number
+          nullable: true
+          example: 0.95
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DashboardSummaryData:
+      type: object
+      properties:
+        currentMonth:
+          type: string
+          example: '2026-10'
+        currentMonthTotal:
+          type: integer
+          example: 2500000
+        lastMonthTotal:
+          type: integer
+          example: 2300000
+        diffAmount:
+          type: integer
+          example: 200000
+        diffType:
+          type: string
+          enum:
+            - boncos
+            - hemat
+            - same
+          example: boncos
+        topExpenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseRecord'
+        recentExpenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseRecord'
+        categoryBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              categoryId:
+                type: string
+                example: food
+              name:
+                type: string
+                example: Makanan & Minuman
+              color:
+                type: string
+                example: '#FF9F45'
+              total:
+                type: integer
+                example: 1200000
+              count:
+                type: integer
+                example: 14
+
+    CustomCategoryRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          example: cat_pet123
+        name:
+          type: string
+          example: Hewan Peliharaan
+        icon:
+          type: string
+          example: PiTagBold
+        color:
+          type: string
+          example: '#FF7EB6'
+        created_at:
+          type: string
+          format: date-time
+
+    TelegramSettingsView:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: true
+        chat_id:
+          type: string
+          example: '-1001234567890'
+        bot_token_hint:
+          type: string
+          example: '...a1b2'
+
+    SuccessResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: INVALID_INPUT
+        message:
+          type: string
+          example: Pesan error berbahasa Indonesia yang ramah

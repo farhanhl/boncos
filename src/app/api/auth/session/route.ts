@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSession, removeSession } from "@/lib/firebase/session";
+import { withTimeout, TimeoutError } from "@/lib/timeout";
+
+export const maxDuration = 30;
 
 const sessionSchema = z.object({
   idToken: z.string().min(1, "ID token wajib disertakan"),
@@ -22,7 +25,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const success = await createSession(parsed.data.idToken);
+    const success = await withTimeout(createSession(parsed.data.idToken));
 
     if (!success) {
       return NextResponse.json(
@@ -36,7 +39,13 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    if (err instanceof TimeoutError || (err as Error)?.name === "TimeoutError") {
+      return NextResponse.json(
+        { ok: false, error: "TIMEOUT", message: "Permintaan melebihi batas waktu 30 detik." },
+        { status: 504 }
+      );
+    }
     return NextResponse.json(
       {
         ok: false,
@@ -49,6 +58,23 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
-  await removeSession();
-  return NextResponse.json({ ok: true });
+  try {
+    await withTimeout(removeSession());
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof TimeoutError || (err as Error)?.name === "TimeoutError") {
+      return NextResponse.json(
+        { ok: false, error: "TIMEOUT", message: "Permintaan melebihi batas waktu 30 detik." },
+        { status: 504 }
+      );
+    }
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "INTERNAL_ERROR",
+        message: "Terjadi kesalahan pada server.",
+      },
+      { status: 500 }
+    );
+  }
 }
