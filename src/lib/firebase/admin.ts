@@ -15,26 +15,46 @@ function getAdminApp(): App {
     return apps[0];
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || "boncos-dev";
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId =
+    process.env.FIREBASE_PROJECT_ID ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    "boncos-dev";
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim()?.replace(/^["']|["']$/g, "");
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (privateKey) {
+    privateKey = privateKey.trim();
+    if (
+      (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+      (privateKey.startsWith("'") && privateKey.endsWith("'"))
+    ) {
+      privateKey = privateKey.slice(1, -1);
+    }
     privateKey = privateKey.replace(/\\n/g, "\n");
   }
 
-  if (clientEmail && privateKey && !privateKey.includes("MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC5")) {
-    return initializeApp({
-      credential: cert({
+  if (clientEmail && privateKey) {
+    try {
+      return initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        }),
         projectId,
-        clientEmail,
-        privateKey,
-      }),
-      projectId,
-    });
+      });
+    } catch (err) {
+      console.error("[Firebase Admin] Gagal inisialisasi credential cert:", err);
+    }
+  } else {
+    console.error(
+      `[Firebase Admin] Environment variable belum lengkap di Vercel: clientEmail=${Boolean(
+        clientEmail
+      )}, privateKey=${Boolean(privateKey)}`
+    );
   }
 
-  // In test or local emulator environment where credentials aren't provided
+  // Fallback
   return initializeApp({ projectId });
 }
 

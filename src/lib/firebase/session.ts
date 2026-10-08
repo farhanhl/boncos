@@ -39,10 +39,16 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   }
 }
 
+export interface CreateSessionResult {
+  success: boolean;
+  cookie?: string;
+  error?: string;
+}
+
 /**
  * Creates and sets a verified Firebase session cookie.
  */
-export async function createSession(idToken: string): Promise<boolean> {
+export async function createSession(idToken: string): Promise<CreateSessionResult> {
   try {
     const auth = getAdminAuth();
     const days = parseInt(process.env.SESSION_COOKIE_MAX_AGE_DAYS || "5", 10);
@@ -59,10 +65,11 @@ export async function createSession(idToken: string): Promise<boolean> {
       path: "/",
     });
 
-    return true;
+    return { success: true, cookie: sessionCookie };
   } catch (error) {
-    console.error("[Session] createSession failed:", error);
-    return false;
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Session] createSession failed:", errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
 

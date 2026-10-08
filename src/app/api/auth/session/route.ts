@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createSession, removeSession } from "@/lib/firebase/session";
+import { createSession, removeSession, SESSION_COOKIE_NAME } from "@/lib/firebase/session";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
 
 export const maxDuration = 30;
@@ -25,20 +25,37 @@ export async function POST(request: Request) {
       );
     }
 
-    const success = await withTimeout(createSession(parsed.data.idToken));
+    const sessionRes = await withTimeout(createSession(parsed.data.idToken));
 
-    if (!success) {
+    if (!sessionRes.success || !sessionRes.cookie) {
+      const isMissingEnv =
+        !process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL;
+
       return NextResponse.json(
         {
           ok: false,
           error: "SESSION_FAILED",
-          message: "Gagal membuat sesi login. Silakan coba lagi.",
+          message: isMissingEnv
+            ? "Environment Variables Firebase (FIREBASE_PRIVATE_KEY / FIREBASE_CLIENT_EMAIL) belum dikonfigurasi di dashboard Vercel."
+            : sessionRes.error || "Gagal membuat sesi login. Silakan coba lagi.",
         },
         { status: 401 }
       );
     }
 
-    return NextResponse.json({ ok: true });
+    const response = NextResponse.json({ ok: true });
+    const days = parseInt(process.env.SESSION_COOKIE_MAX_AGE_DAYS || "5", 10);
+    const expiresIn = days * 24 * 60 * 60 * 1000;
+
+    response.cookies.set(SESSION_COOKIE_NAME, sessionRes.cookie, {
+      maxAge: expiresIn / 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
+    return response;
   } catch (err) {
     if (err instanceof TimeoutError || (err as Error)?.name === "TimeoutError") {
       return NextResponse.json(

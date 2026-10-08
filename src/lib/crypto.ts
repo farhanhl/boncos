@@ -5,10 +5,11 @@ const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12; // 96 bits for GCM
 
 function getEncryptionKey(): Buffer {
-  const keyBase64 = process.env.TELEGRAM_ENCRYPTION_KEY;
+  let keyBase64 = process.env.TELEGRAM_ENCRYPTION_KEY;
   if (!keyBase64) {
     throw new Error("TELEGRAM_ENCRYPTION_KEY is not defined in environment variables");
   }
+  keyBase64 = keyBase64.trim().replace(/^["']|["']$/g, "");
   const key = Buffer.from(keyBase64, "base64");
   if (key.length !== 32) {
     throw new Error("TELEGRAM_ENCRYPTION_KEY must be a 32-byte base64 string");

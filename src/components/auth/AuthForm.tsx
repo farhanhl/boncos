@@ -65,10 +65,21 @@ export function AuthForm({ mode }: AuthFormProps) {
         body: JSON.stringify({ idToken }),
       });
 
-      const data = await res.json();
+      let data: { ok?: boolean; message?: string; error?: string } = {};
+      try {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = {};
+      }
 
       if (!res.ok || !data.ok) {
-        throw new Error(data.message || "Gagal membuat sesi login.");
+        throw new Error(
+          data.message ||
+            (res.status === 500
+              ? "Server error (500): Harap periksa Environment Variables Firebase di dashboard Vercel (FIREBASE_PRIVATE_KEY & FIREBASE_CLIENT_EMAIL)."
+              : `Gagal membuat sesi login (Status ${res.status}).`)
+        );
       }
 
       router.push(redirectPath);
