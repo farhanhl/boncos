@@ -85,6 +85,24 @@ export function findMoneyTokens(line: string): MoneyToken[] {
   let match: RegExpExecArray | null;
   while ((match = regex.exec(line)) !== null) {
     const candidateStr = match[0].trim();
+    // Skip if preceded or followed by slash or colon (part of date or time e.g. 09/10/2026, 14:30)
+    const prevChar = match.index > 0 ? line[match.index - 1] : "";
+    const nextChar =
+      match.index + match[0].length < line.length
+        ? line[match.index + match[0].length]
+        : "";
+    if (prevChar === "/" || prevChar === ":" || nextChar === "/" || nextChar === ":") {
+      continue;
+    }
+
+    // Skip if part of ISO date or hyphenated date e.g. 2026-10-09 or 09-10-2026
+    if (
+      (prevChar === "-" && /\d/.test(line[match.index - 2] || "")) ||
+      (nextChar === "-" && /\d/.test(line[match.index + match[0].length + 1] || ""))
+    ) {
+      continue;
+    }
+
     // Skip tokens immediately followed by non-monetary units (e.g. 500 orang, 100 halaman)
     const remainingLine = line.slice(match.index + match[0].length);
     if (

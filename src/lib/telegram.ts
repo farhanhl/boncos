@@ -215,6 +215,7 @@ export async function sendTelegramNotificationForExpense(
 export interface ScanNotificationOptions {
   success: boolean;
   errorReason?: string;
+  imageUrl?: string | null;
   expense?: {
     name: string;
     amount: number;
@@ -255,12 +256,21 @@ export async function sendTelegramScanResult(
         `Metode: <i>Webhook Scan Otomatis</i>`,
       ].join("\n");
     } else {
-      messageHtml = [
+      const lines = [
         "⚠️ <b>Pencatatan Struk Gagal</b>",
         `Alasan: <b>${escapeHtml(options.errorReason || "Format struk tidak terbaca atau nominal tidak ditemukan")}</b>`,
+      ];
+
+      if (options.imageUrl) {
+        lines.push(`🖼️ <b>Foto:</b> <a href="${escapeHtml(options.imageUrl)}">${escapeHtml(options.imageUrl)}</a>`);
+      }
+
+      lines.push(
         "",
-        "<i>Tips: Pastikan foto struk memiliki pencahayaan cukup, tidak blur, dan memuat total nominal transaksi.</i>",
-      ].join("\n");
+        "<i>Tips: Pastikan foto struk memiliki pencahayaan cukup, tidak blur, dan memuat total nominal transaksi.</i>"
+      );
+
+      messageHtml = lines.join("\n");
     }
 
     await sendTelegramMessage(token, settings.chat_id, messageHtml);

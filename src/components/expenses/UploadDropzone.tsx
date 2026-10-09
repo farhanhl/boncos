@@ -47,6 +47,8 @@ export function UploadDropzone({
           const title =
             err.code === "NOT_AN_EXPENSE"
               ? "Bukan Struk atau Bukti Bayar"
+              : err.code === "LOW_CONFIDENCE"
+              ? "Tingkat Keyakinan Terlalu Rendah (< 50%)"
               : err.code === "NO_TEXT"
               ? "Teks Tidak Terbaca"
               : err.code === "INVALID_FILE"

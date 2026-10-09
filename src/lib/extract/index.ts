@@ -115,6 +115,14 @@ export async function extractFromImage(
       );
     }
 
+    // Confidence validation: reject if confidence is below 50% (< 0.5)
+    if (result1.extraction_confidence < 0.5) {
+      throw new ExtractionError(
+        "LOW_CONFIDENCE",
+        `Tingkat keyakinan pembacaan struk terlalu rendah (${Math.round(result1.extraction_confidence * 100)}% < 50%). Foto mungkin buram atau kurang jelas. Coba foto ulang yang lebih terang dan tegak, atau isi manual.`
+      );
+    }
+
     return result1;
   } catch (err) {
     if (err instanceof ExtractionError) {

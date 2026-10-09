@@ -7,14 +7,33 @@ import { getUidByIngestionKey } from "@/actions/ingestion";
 import { parseReceiptText, isExpenseDocument } from "@/lib/extract/parse";
 import { normalizeOcrText } from "@/lib/extract/parse/normalize";
 import { sendTelegramScanResult } from "@/lib/telegram";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
+async function reportScanFailure(
+  uid: string,
+  failReason: string,
+  imageBuffer: Buffer | null
+): Promise<string | null> {
+  let uploadedUrl: string | null = null;
+  if (imageBuffer && imageBuffer.length > 0) {
+    uploadedUrl = await uploadToCloudinary(imageBuffer);
+  }
+  await sendTelegramScanResult(uid, {
+    success: false,
+    errorReason: failReason,
+    imageUrl: uploadedUrl,
+  });
+  return uploadedUrl;
+}
+
 export async function POST(request: Request) {
   let uid: string | null = null;
+  let imageBuffer: Buffer | null = null;
 
   try {
     return await withTimeout(
@@ -24,7 +43,6 @@ export async function POST(request: Request) {
       request.headers.get("x-boncos-key") ||
       request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
       "";
-    let imageBuffer: Buffer | null = null;
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
@@ -134,16 +152,14 @@ export async function POST(request: Request) {
     } catch (ocrErr) {
       console.error("[POST /api/scan OCR Error]:", ocrErr);
       const failReason = "Mesin OCR gagal membaca gambar struk.";
-      await sendTelegramScanResult(uid, {
-        success: false,
-        errorReason: failReason,
-      });
+      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
 
       return NextResponse.json(
         {
           ok: false,
           error: "OCR_ERROR",
           message: `Pencatatan gagal karena: ${failReason}`,
+          image_url: uploadedUrl,
         },
         { status: 422 }
       );
@@ -156,16 +172,29 @@ export async function POST(request: Request) {
 
     if (!isValidExpense) {
       const failReason = "Foto yang diunggah bukan struk atau nota pembayaran.";
-      await sendTelegramScanResult(uid, {
-        success: false,
-        errorReason: failReason,
-      });
+      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
 
       return NextResponse.json(
         {
           ok: false,
           error: "NOT_AN_EXPENSE",
           message: `Pencatatan gagal karena: ${failReason}`,
+          image_url: uploadedUrl,
+        },
+        { status: 422 }
+      );
+    }
+
+    if (parsed.extraction_confidence < 0.5) {
+      const failReason = `Tingkat keyakinan hasil pembacaan struk terlalu rendah (${Math.round(parsed.extraction_confidence * 100)}% < 50%).`;
+      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "LOW_CONFIDENCE",
+          message: `Pencatatan gagal karena: ${failReason} Silakan foto ulang dengan lebih jelas atau catat manual.`,
+          image_url: uploadedUrl,
         },
         { status: 422 }
       );
@@ -179,17 +208,14 @@ export async function POST(request: Request) {
         (ocrText.trim().length < 5
           ? "Gambar buram atau tidak ada teks terbaca pada struk."
           : "Nominal total belanja tidak ditemukan pada struk.");
-
-      await sendTelegramScanResult(uid, {
-        success: false,
-        errorReason: failReason,
-      });
+      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
 
       return NextResponse.json(
         {
           ok: false,
           error: "PARSE_FAILED",
           message: `Pencatatan gagal karena: ${failReason}`,
+          image_url: uploadedUrl,
         },
         { status: 422 }
       );
@@ -248,10 +274,7 @@ export async function POST(request: Request) {
   } catch (err) {
     if (err instanceof TimeoutError || (err as Error)?.name === "TimeoutError") {
       if (uid) {
-        await sendTelegramScanResult(uid, {
-          success: false,
-          errorReason: "Waktu pemrosesan struk melebihi batas 30 detik.",
-        });
+        await reportScanFailure(uid, "Waktu pemrosesan struk melebihi batas 30 detik.", imageBuffer);
       }
 
       return NextResponse.json(
@@ -265,10 +288,7 @@ export async function POST(request: Request) {
     }
 
     if (uid) {
-      await sendTelegramScanResult(uid, {
-        success: false,
-        errorReason: "Terjadi gangguan internal pada server saat memproses struk.",
-      });
+      await reportScanFailure(uid, "Terjadi gangguan internal pada server saat memproses struk.", imageBuffer);
     }
 
     return NextResponse.json(

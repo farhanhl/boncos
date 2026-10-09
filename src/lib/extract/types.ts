@@ -35,7 +35,8 @@ export type ExtractionErrorCode =
   | "INVALID_FILE"
   | "OCR_FAILED"
   | "NO_TEXT"
-  | "NOT_AN_EXPENSE";
+  | "NOT_AN_EXPENSE"
+  | "LOW_CONFIDENCE";
 
 export interface OcrBBox {
   x0: number;

@@ -297,6 +297,20 @@ Waktu 09 Okt 2026
       expect(parsed.doc_type).toBe("ewallet");
       expect(parsed.amount.value).toBe(25000);
       expect(isExpenseDocument(lines, parsed.doc_type, parsed)).toBe(true);
+      expect(parsed.extraction_confidence).toBeGreaterThanOrEqual(0.5);
+    });
+
+    it("evaluates confidence score correctly and flags low confidence (< 0.5)", () => {
+      // Receipt without amount (amount is null -> 0.6 * 0 = 0, so extraction_confidence < 0.5)
+      const blurryReceipt = `
+WARUNG KOPI
+09/10/2026
+KASIR 01
+      `.trim();
+
+      const parsed = parseReceiptText(blurryReceipt);
+      expect(parsed.amount.value).toBe(null);
+      expect(parsed.extraction_confidence).toBeLessThan(0.5);
     });
   });
 });
