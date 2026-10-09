@@ -18,14 +18,14 @@ export function UploadDropzone({
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("Lagi baca struknya");
   const [progressStep, setProgressStep] = useState(0);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorInfo, setErrorInfo] = useState<{ title: string; message: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleProcessFile = useCallback(
     async (file: File) => {
-      setErrorMsg(null);
+      setErrorInfo(null);
       setIsProcessing(true);
       setStatusText("Lagi baca struknya");
 
@@ -44,13 +44,23 @@ export function UploadDropzone({
         setIsProcessing(false);
         console.error("[UploadDropzone] Error scanning receipt:", err);
         if (err instanceof ExtractionError) {
-          setErrorMsg(err.message);
+          const title =
+            err.code === "NOT_AN_EXPENSE"
+              ? "Bukan Struk atau Bukti Bayar"
+              : err.code === "NO_TEXT"
+              ? "Teks Tidak Terbaca"
+              : err.code === "INVALID_FILE"
+              ? "File Tidak Sesuai"
+              : "Gagal Membaca";
+          setErrorInfo({ title, message: err.message });
         } else {
-          setErrorMsg(
-            err instanceof Error
-              ? `Pembaca struk gagal: ${err.message}`
-              : "Pembaca struk gagal memproses gambar. Coba lagi atau isi manual."
-          );
+          setErrorInfo({
+            title: "Gagal Membaca",
+            message:
+              err instanceof Error
+                ? `Pembaca struk gagal: ${err.message}`
+                : "Pembaca struk gagal memproses gambar. Coba lagi atau isi manual.",
+          });
         }
       }
     },
@@ -149,12 +159,12 @@ export function UploadDropzone({
 
   return (
     <div className="space-y-4">
-      {errorMsg && (
+      {errorInfo && (
         <div className="p-4 bg-stempel/10 border-2 border-stempel rounded-[10px] text-tinta flex items-start gap-3">
           <PiWarningBold className="text-2xl text-stempel shrink-0 mt-0.5" />
           <div className="flex-1 text-sm">
-            <p className="font-bold text-stempel mb-1">Gagal membaca</p>
-            <p>{errorMsg}</p>
+            <p className="font-bold text-stempel mb-1">{errorInfo.title}</p>
+            <p>{errorInfo.message}</p>
             <button
               onClick={onFallbackManual}
               className="mt-2 text-xs font-bold text-pulpen underline cursor-pointer"

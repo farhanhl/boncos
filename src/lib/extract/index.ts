@@ -1,7 +1,8 @@
 import type { ExtractionResult, ExtractionErrorCode } from "./types";
 import { preprocessImage } from "./preprocess";
 import { BrowserOcrEngine, type OcrProgressCallback } from "./ocr";
-import { parseReceiptText } from "./parse";
+import { parseReceiptText, isExpenseDocument } from "./parse";
+import { normalizeOcrText } from "./parse/normalize";
 
 export class ExtractionError extends Error {
   code: ExtractionErrorCode;
@@ -73,22 +74,12 @@ export async function extractFromImage(
           ocrOutput1.lines.length
         : 50;
 
+    const lines1 = normalizeOcrText(rawText1);
     let result1 = parseReceiptText(rawText1, avgConfidence1 / 100);
+    let isExpense1 = isExpenseDocument(lines1, result1.doc_type, result1);
 
-    // Check if definitely not an expense
-    if (
-      result1.amount.value === null &&
-      result1.doc_type === "unknown" &&
-      result1.name.value === null
-    ) {
-      throw new ExtractionError(
-        "NOT_AN_EXPENSE",
-        "Ini sepertinya bukan struk atau bukti bayar. Coba foto lain atau isi manual."
-      );
-    }
-
-    // 4. Pass 2 (Adaptive binarization) if Pass 1 confidence is low (< 0.7)
-    if (result1.extraction_confidence < 0.7) {
+    // 4. Pass 2 (Adaptive binarization) if Pass 1 is not recognized as expense or confidence is low (< 0.7)
+    if (!isExpense1 || result1.extraction_confidence < 0.7) {
       try {
         const preprocessedBlob2 = await preprocessImage(file, {
           adaptiveBinarization: true,
@@ -103,14 +94,25 @@ export async function extractFromImage(
             : 50;
 
         const result2 = parseReceiptText(rawText2, avgConfidence2 / 100);
+        const lines2 = normalizeOcrText(rawText2);
+        const isExpense2 = isExpenseDocument(lines2, result2.doc_type, result2);
 
-        // Pick whichever result achieved higher confidence
-        if (result2.extraction_confidence > result1.extraction_confidence) {
+        // Pick Pass 2 if it is a valid expense and (Pass 1 wasn't an expense OR Pass 2 achieved higher confidence)
+        if (isExpense2 && (!isExpense1 || result2.extraction_confidence > result1.extraction_confidence)) {
           result1 = result2;
+          isExpense1 = true;
         }
       } catch {
         // If Pass 2 fails, keep Pass 1 result
       }
+    }
+
+    // Final validation: reject if the photo is not a receipt or payment document
+    if (!isExpense1) {
+      throw new ExtractionError(
+        "NOT_AN_EXPENSE",
+        "Ini sepertinya bukan struk atau bukti bayar. Pastikan foto adalah struk belanja, nota, atau bukti transfer."
+      );
     }
 
     return result1;

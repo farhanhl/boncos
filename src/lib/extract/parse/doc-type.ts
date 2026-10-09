@@ -1,5 +1,6 @@
 import type { DocumentType } from "../types";
 import type { NormalizedLine } from "./normalize";
+import { isDisqualifiedDocument } from "./validate";
 
 const BANK_TRANSFER_KEYWORDS = [
   "M-TRANSFER",
@@ -42,6 +43,7 @@ const STRONG_RECEIPT_KEYWORDS = [
   "TUNAI",
   "KEMBALI",
   "STRUK",
+  "NOTA",
   "ITEMS",
 ];
 
@@ -61,6 +63,11 @@ const EWALLET_KEYWORDS = [
 ];
 
 export function detectDocumentType(lines: NormalizedLine[]): DocumentType {
+  // Disqualified non-receipt documents (KTP, SIM, certificates, etc.)
+  if (isDisqualifiedDocument(lines)) {
+    return "unknown";
+  }
+
   const fullText = lines.map((l) => l.upper).join(" ");
 
   // 1. Bank transfer takes priority if specific bank transfer headers/fields exist
@@ -84,15 +91,28 @@ export function detectDocumentType(lines: NormalizedLine[]): DocumentType {
     }
   }
 
-  // 4. Fallback checks
-  if (fullText.includes("TRANSFER") || fullText.includes("BANK")) {
+  // 4. Fallback checks: require financial/banking context
+  if (
+    fullText.includes("TRANSFER") ||
+    (fullText.includes("BANK") &&
+      /\b(REKENING|NO\.?\s*REK|VIRTUAL ACCOUNT|VA|KIRIM|M-BANKING|MOBILE BANKING|SALDO|TRANSAKSI)\b/i.test(
+        fullText
+      ))
+  ) {
     return "bank_transfer";
   }
 
-  if (fullText.includes("TOTAL")) {
+  if (
+    fullText.includes("TOTAL") &&
+    (/\b(?:RP|IDR)\b/i.test(fullText) ||
+      /\b(BAYAR|BELANJA|TAGIHAN|PEMBAYARAN|SUBTOTAL|TUNAI|KASIR|STRUK|NOTA|KEMBALI|ITEM|QTY|HARGA|PESANAN)\b/i.test(
+        fullText
+      ))
+  ) {
     return "receipt";
   }
 
   return "unknown";
 }
+
 

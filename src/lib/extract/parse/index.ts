@@ -6,6 +6,9 @@ import { extractDate } from "./date";
 import { extractName } from "./name";
 import { extractCategorySuggestion } from "./category";
 import { computeExtractionConfidence, determineExtractionStatus } from "./confidence";
+import { isExpenseDocument, isDisqualifiedDocument, hasTransactionKeywords } from "./validate";
+
+export { isExpenseDocument, isDisqualifiedDocument, hasTransactionKeywords };
 
 /**
  * Pure parser function: transforms raw OCR text into structured ExtractionResult.

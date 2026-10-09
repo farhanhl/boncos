@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { parseReceiptText } from "@/lib/extract/parse";
-import { parseMoney } from "@/lib/extract/parse/money";
+import { parseReceiptText, isExpenseDocument, isDisqualifiedDocument } from "@/lib/extract/parse";
+import { parseMoney, findMoneyTokens } from "@/lib/extract/parse/money";
 import { normalizeOcrText } from "@/lib/extract/parse/normalize";
 
 describe("Extraction Parser Tests (EXTRACTION.md)", () => {
@@ -168,6 +168,135 @@ TANGGAL 02/10/2026
       `.trim();
       const result = parseReceiptText(rawPln);
       expect(result.category_suggestion.value).toBe("bills");
+    });
+  });
+
+  describe("Validation: Non-receipt and Non-payment Documents", () => {
+    it("identifies KTP (Identity Card) as disqualified non-expense document", () => {
+      const rawKtp = `
+PROVINSI DKI JAKARTA
+JAKARTA TIMUR
+NIK : 3175020101900001
+NAMA : BUDI SANTOSO
+TEMPAT/TGL LAHIR : JAKARTA, 01-01-1990
+GOL. DARAH : O
+ALAMAT : JL. MAWAR NO. 12
+RT/RW : 001/002
+AGAMA : ISLAM
+STATUS PERKAWINAN: KAWIN
+PEKERJAAN : KARYAWAN SWASTA
+      `.trim();
+
+      const lines = normalizeOcrText(rawKtp);
+      expect(isDisqualifiedDocument(lines)).toBe(true);
+
+      const parsed = parseReceiptText(rawKtp);
+      expect(parsed.doc_type).toBe("unknown");
+      expect(parsed.amount.value).toBe(null);
+      expect(isExpenseDocument(lines, parsed.doc_type, parsed)).toBe(false);
+    });
+
+    it("identifies SIM (Driving License) as disqualified non-expense document", () => {
+      const rawSim = `
+KEPOLISIAN NEGARA REPUBLIK INDONESIA
+SURAT IZIN MENGEMUDI
+DRIVING LICENSE
+SIM A
+1234-5678-901234
+NAMA : JANE DOE
+ALAMAT : JL. SUDIRMAN NO. 45
+BERLAKU S/D : 01-01-2028
+      `.trim();
+
+      const lines = normalizeOcrText(rawSim);
+      expect(isDisqualifiedDocument(lines)).toBe(true);
+
+      const parsed = parseReceiptText(rawSim);
+      expect(isExpenseDocument(lines, parsed.doc_type, parsed)).toBe(false);
+    });
+
+    it("identifies academic diploma / certificates as non-expense document", () => {
+      const rawIjazah = `
+KEMENTERIAN PENDIDIKAN DAN KEBUDAYAAN
+IJAZAH
+SEKOLAH MENENGAH ATAS
+DIBERIKAN KEPADA: AHMAD FAUZI
+NOMOR IJAZAH: DN-01/M-SMA/20/0012345
+      `.trim();
+
+      const lines = normalizeOcrText(rawIjazah);
+      expect(isDisqualifiedDocument(lines)).toBe(true);
+
+      const parsed = parseReceiptText(rawIjazah);
+      expect(isExpenseDocument(lines, parsed.doc_type, parsed)).toBe(false);
+    });
+
+    it("rejects arbitrary textbook / article without financial context", () => {
+      const rawArticle = `
+BAB 1: PENDAHULUAN
+Latar Belakang Penelitian
+Pada tahun 2024, populasi dunia diperkirakan mencapai 8.000.000.000 jiwa.
+Berdasarkan sensus terbaru, total 1.500 peserta mengikuti kegiatan ilmiah di kampus.
+      `.trim();
+
+      const lines = normalizeOcrText(rawArticle);
+      expect(isDisqualifiedDocument(lines)).toBe(false);
+
+      const parsed = parseReceiptText(rawArticle);
+      expect(parsed.doc_type).toBe("unknown");
+      expect(isExpenseDocument(lines, parsed.doc_type, parsed)).toBe(false);
+    });
+
+    it("does not treat numbers followed by units (orang, peserta, halaman) as money tokens", () => {
+      const line = "Total 500 orang hadir dalam 100 halaman dokumen";
+      const tokens = findMoneyTokens(line);
+      expect(tokens).toEqual([]);
+    });
+
+    it("rejects casual chat screenshot as non-expense", () => {
+      const rawChat = `
+Halo bro lagi dimana?
+Nanti malam kita kumpul jam 7 di kafe biasa ya.
+Jangan lupa kabari kalau sudah jalan.
+      `.trim();
+
+      const lines = normalizeOcrText(rawChat);
+      const parsed = parseReceiptText(rawChat);
+      expect(parsed.doc_type).toBe("unknown");
+      expect(parsed.amount.value).toBe(null);
+      expect(isExpenseDocument(lines, parsed.doc_type, parsed)).toBe(false);
+    });
+
+    it("approves genuine retail receipt as expense document", () => {
+      const rawReceipt = `
+INDOMARET
+JL. SUDIRMAN KASIR 01
+AQUA 600ML 4.000
+TOTAL 4.000
+TUNAI 10.000
+KEMBALI 6.000
+      `.trim();
+
+      const lines = normalizeOcrText(rawReceipt);
+      const parsed = parseReceiptText(rawReceipt);
+      expect(parsed.doc_type).toBe("receipt");
+      expect(parsed.amount.value).toBe(4000);
+      expect(isExpenseDocument(lines, parsed.doc_type, parsed)).toBe(true);
+    });
+
+    it("approves genuine ewallet screenshot as expense document", () => {
+      const rawEwallet = `
+Pembayaran Berhasil
+Rp 25.000
+Ke Warung Makan
+Waktu 09 Okt 2026
+      `.trim();
+
+      const lines = normalizeOcrText(rawEwallet);
+      const parsed = parseReceiptText(rawEwallet);
+      expect(parsed.doc_type).toBe("ewallet");
+      expect(parsed.amount.value).toBe(25000);
+      expect(isExpenseDocument(lines, parsed.doc_type, parsed)).toBe(true);
     });
   });
 });

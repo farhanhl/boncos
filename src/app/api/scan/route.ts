@@ -4,7 +4,8 @@ import { createWorker } from "tesseract.js";
 import { FieldValue } from "firebase-admin/firestore";
 import { userCol } from "@/lib/firebase/admin";
 import { getUidByIngestionKey } from "@/actions/ingestion";
-import { parseReceiptText } from "@/lib/extract/parse";
+import { parseReceiptText, isExpenseDocument } from "@/lib/extract/parse";
+import { normalizeOcrText } from "@/lib/extract/parse/normalize";
 import { sendTelegramScanResult } from "@/lib/telegram";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
 
@@ -149,7 +150,27 @@ export async function POST(request: Request) {
     }
 
     // 4. Ekstraksi Aturan / Rule-based Parser (Pure Function)
+    const lines = normalizeOcrText(ocrText);
     const parsed = parseReceiptText(ocrText, ocrConfidence);
+    const isValidExpense = isExpenseDocument(lines, parsed.doc_type, parsed);
+
+    if (!isValidExpense) {
+      const failReason = "Foto yang diunggah bukan struk atau nota pembayaran.";
+      await sendTelegramScanResult(uid, {
+        success: false,
+        errorReason: failReason,
+      });
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "NOT_AN_EXPENSE",
+          message: `Pencatatan gagal karena: ${failReason}`,
+        },
+        { status: 422 }
+      );
+    }
+
     const amountVal = parsed.amount.value;
 
     if (!amountVal || !Number.isSafeInteger(amountVal) || amountVal <= 0) {

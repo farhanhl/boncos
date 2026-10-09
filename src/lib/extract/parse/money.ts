@@ -85,6 +85,15 @@ export function findMoneyTokens(line: string): MoneyToken[] {
   let match: RegExpExecArray | null;
   while ((match = regex.exec(line)) !== null) {
     const candidateStr = match[0].trim();
+    // Skip tokens immediately followed by non-monetary units (e.g. 500 orang, 100 halaman)
+    const remainingLine = line.slice(match.index + match[0].length);
+    if (
+      /^\s*(?:orang|siswa|peserta|halaman|hlm|kasus|korban|eksemplar|tahun|thn|hari|bulan|bln|persen|%|unit)\b/i.test(
+        remainingLine
+      )
+    ) {
+      continue;
+    }
     const parsed = parseMoney(candidateStr);
     if (parsed !== null) {
       results.push({

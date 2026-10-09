@@ -244,7 +244,17 @@ export function extractAmount(
     }
   }
 
-  const fallbackAmount = maxRpAmount > 0 ? maxRpAmount : maxFormattedAmount;
+  // Only allow maxFormattedAmount if document has known doc_type or financial/transaction context
+  const hasFinancialContext =
+    docType !== "unknown" ||
+    lines.some((l) =>
+      /\b(TOTAL|BAYAR|TAGIHAN|PEMBAYARAN|BELANJA|KASIR|STRUK|NOTA|SUBTOTAL|HARGA|BIAYA)\b/.test(
+        l.upper
+      )
+    );
+
+  const fallbackAmount =
+    maxRpAmount > 0 ? maxRpAmount : hasFinancialContext ? maxFormattedAmount : 0;
   if (fallbackAmount > 0) {
     return {
       field: {
