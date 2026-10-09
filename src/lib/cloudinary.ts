@@ -1,6 +1,31 @@
 /**
+ * Transforms a Cloudinary delivery URL to convert the image to WebP
+ * and apply automatic quality compression (q_auto).
+ * Example:
+ *   https://res.cloudinary.com/demo/image/upload/v123/receipt.jpg
+ * becomes:
+ *   https://res.cloudinary.com/demo/image/upload/f_webp,q_auto/v123/receipt.webp
+ */
+export function formatCloudinaryWebp(url: string): string {
+  if (!url || typeof url !== "string") return url;
+
+  // Insert f_webp,q_auto into the upload path if not already present
+  let transformed = url;
+  if (!transformed.includes("f_webp")) {
+    transformed = transformed.replace(
+      /\/image\/upload\//i,
+      "/image/upload/f_webp,q_auto/"
+    );
+  }
+
+  // Replace file extension with .webp
+  transformed = transformed.replace(/\.(?:jpe?g|png|heic|heif|tiff?|bmp)$/i, ".webp");
+  return transformed;
+}
+
+/**
  * Utility to upload failed receipt scans to Cloudinary (unsigned upload).
- * Used exclusively for reporting failed scans to Telegram.
+ * Automatically applies WebP conversion and compression to the returned URL.
  */
 export async function uploadToCloudinary(
   buffer: Buffer,
@@ -28,7 +53,10 @@ export async function uploadToCloudinary(
     }
 
     const data = (await res.json()) as { secure_url?: string; url?: string };
-    return data.secure_url || data.url || null;
+    const rawUrl = data.secure_url || data.url || null;
+    if (!rawUrl) return null;
+
+    return formatCloudinaryWebp(rawUrl);
   } catch (err) {
     console.error("[uploadToCloudinary Exception]:", err);
     return null;
