@@ -26,7 +26,7 @@ export function SettingsSubnav() {
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5 border-b-2 border-dashed border-tinta/30 pb-4 mb-6">
+    <div className="flex flex-wrap items-center gap-2.5 border-b-2 border-dashed border-tinta/30 pb-4 mb-6 w-full min-w-0">
       {tabs.map((tab) => {
         const active = pathname === tab.href;
         const Icon = tab.icon;
