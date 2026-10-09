@@ -113,25 +113,27 @@ export function ApiKeyManager({
   -F "image=@struk_belanja.jpg"`;
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full max-w-full min-w-0">
       {/* Alert status integrasi Telegram */}
       <div
-        className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard flex items-start gap-4"
+        className="bg-kertas border-2 border-tinta rounded-[10px] p-4 sm:p-6 shadow-hard flex items-start gap-3 sm:gap-4 max-w-full min-w-0"
       >
         <PiTelegramLogoBold
-          className={`text-2xl shrink-0 mt-0.5 ${telegramEnabled ? "text-cendol" : "text-kuning"
-            }`}
+          className={`text-2xl shrink-0 mt-0.5 ${
+            telegramEnabled ? "text-cendol" : "text-kuning"
+          }`}
         />
-        <div className="text-xs leading-relaxed">
+        <div className="text-xs leading-relaxed min-w-0 flex-1">
           <p
-            className={`font-bold text-sm mb-0.5 ${telegramEnabled ? "text-cendol" : "text-kuning"
-              }`}
+            className={`font-bold text-sm mb-0.5 ${
+              telegramEnabled ? "text-cendol" : "text-kuning"
+            }`}
           >
             {telegramEnabled
               ? "Notifikasi Telegram Terhubung 🚀"
               : "Notifikasi Telegram Belum Terhubung"}
           </p>
-          <span className="text-tinta-pudar">
+          <span className="text-tinta-pudar break-words">
             {telegramEnabled
               ? "Setiap struk yang dikirim via endpoint akan otomatis dilaporkan ke Telegram kamu (sukses beserta rincian, atau alasan jika gagal)."
               : "Untuk mendapatkan notifikasi real-time saat struk discan dari endpoint ini, kamu bisa mengaktifkan bot Telegram di tab 'Notifikasi Telegram'."}
@@ -141,51 +143,52 @@ export function ApiKeyManager({
 
       {feedback && (
         <div
-          className={`p-3 rounded-md border-2 font-bold text-sm shadow-hard-sm ${feedback.type === "success"
-            ? "bg-cendol/20 border-cendol text-tinta"
-            : "bg-stempel/10 border-stempel text-stempel"
-            }`}
+          className={`p-3 rounded-md border-2 font-bold text-sm shadow-hard-sm max-w-full min-w-0 break-words ${
+            feedback.type === "success"
+              ? "bg-cendol/20 border-cendol text-tinta"
+              : "bg-stempel/10 border-stempel text-stempel"
+          }`}
         >
           {feedback.text}
         </div>
       )}
 
       {/* Kartu Kode Unik */}
-      <div className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b-2 border-dashed border-tinta/30">
-          <div className="flex items-center gap-2">
-            <PiKeyBold className="text-2xl text-kuning" />
-            <h2 className="font-display text-2xl text-tinta">
+      <div className="bg-kertas border-2 border-tinta rounded-[10px] p-4 sm:p-6 shadow-hard space-y-4 max-w-full min-w-0">
+        <div className="flex items-center justify-between pb-3 border-b-2 border-dashed border-tinta/30 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <PiKeyBold className="text-2xl text-kuning shrink-0" />
+            <h2 className="font-display text-xl sm:text-2xl text-tinta truncate">
               Kode Unik Pengguna
             </h2>
           </div>
-          <span className="bg-kuning text-karbon text-xs font-bold px-2 py-0.5 rounded border-2 border-tinta">
+          <span className="bg-kuning text-karbon text-xs font-bold px-2 py-0.5 rounded border-2 border-tinta shrink-0">
             Rahasia
           </span>
         </div>
 
-        <p className="text-xs text-tinta-pudar">
+        <p className="text-xs text-tinta-pudar break-words">
           Gunakan kode unik ini untuk mengirim struk via endpoint tanpa perlu login.
           Hanya kamu yang memiliki kode ini. Jangan bagikan kepada siapa pun.
         </p>
 
         {/* Display Key */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
-          <div className="flex-1 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta font-mono text-sm tracking-wide flex items-center justify-between">
-            <span className="truncate">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1 w-full min-w-0">
+          <div className="flex-1 min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta font-mono text-sm tracking-wide flex items-center justify-between gap-2 overflow-hidden">
+            <span className="truncate min-w-0 select-all">
               {showKey ? key : key ? `${key.slice(0, 7)}${"•".repeat(18)}` : "Memuat..."}
             </span>
             <button
               type="button"
               onClick={() => setShowKey(!showKey)}
-              className="text-tinta-pudar hover:text-tinta p-1 ml-2 transition-colors cursor-pointer"
+              className="text-tinta-pudar hover:text-tinta p-1 shrink-0 transition-colors cursor-pointer"
               title={showKey ? "Sembunyikan kode" : "Tampilkan kode"}
             >
               {showKey ? <PiEyeSlashBold className="text-lg" /> : <PiEyeBold className="text-lg" />}
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleCopyKey}
@@ -208,7 +211,7 @@ export function ApiKeyManager({
               type="button"
               onClick={handleRegenerate}
               disabled={regenerating}
-              className="flex items-center justify-center gap-1.5 px-3 min-h-11 bg-kertas text-tinta font-bold border-2 border-tinta rounded-md shadow-hard hover:bg-tinta/10 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-sm cursor-pointer disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 px-3 min-h-11 bg-kertas text-tinta font-bold border-2 border-tinta rounded-md shadow-hard hover:bg-tinta/10 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-sm cursor-pointer disabled:opacity-50 shrink-0"
               title="Buat kode baru"
             >
               <PiArrowsClockwiseBold className={`text-base ${regenerating ? "animate-spin" : ""}`} />
@@ -219,24 +222,24 @@ export function ApiKeyManager({
       </div>
 
       {/* Petunjuk Penggunaan Endpoint */}
-      <div className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard space-y-4">
+      <div className="bg-kertas border-2 border-tinta rounded-[10px] p-4 sm:p-6 shadow-hard space-y-4 max-w-full min-w-0">
         <div className="flex items-center gap-2 pb-3 border-b-2 border-dashed border-tinta/30">
-          <PiTerminalBold className="text-2xl text-pulpen" />
-          <h2 className="font-display text-2xl text-tinta">
+          <PiTerminalBold className="text-2xl text-pulpen shrink-0" />
+          <h2 className="font-display text-xl sm:text-2xl text-tinta break-words leading-tight">
             Cara Penggunaan Endpoint Webhook Scan
           </h2>
         </div>
 
-        <p className="text-xs text-tinta-pudar leading-relaxed">
+        <p className="text-xs text-tinta-pudar leading-relaxed break-words">
           Kirim request HTTP <code className="bg-karbon text-kuning px-1.5 py-0.5 rounded border border-tinta/20">POST</code> ke endpoint scan di bawah dengan menyertakan file gambar struk dan kode unik kamu. Endpoint ini tidak memerlukan session login.
         </p>
 
         {/* URL Endpoint Scan dengan Tombol Salin */}
-        <div className="space-y-1.5 pt-1">
+        <div className="space-y-1.5 pt-1 w-full min-w-0">
           <label className="text-xs font-bold text-tinta">URL Endpoint Scan:</label>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="flex-1 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-pulpen font-mono text-sm tracking-wide font-bold flex items-center justify-between overflow-hidden">
-              <span className="truncate select-all">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full min-w-0">
+            <div className="flex-1 min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-pulpen font-mono text-sm tracking-wide font-bold flex items-center overflow-hidden">
+              <span className="truncate select-all min-w-0 w-full block">
                 {scanApiUrl || "/api/scan"}
               </span>
             </div>
@@ -262,13 +265,13 @@ export function ApiKeyManager({
         </div>
 
         {/* Contoh cURL */}
-        <div className="space-y-1.5 pt-2">
+        <div className="space-y-1.5 pt-2 w-full min-w-0">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-tinta">Contoh Perintah cURL:</span>
             <button
               type="button"
               onClick={handleCopyCurl}
-              className="text-xs font-bold text-pulpen hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-pulpen hover:underline flex items-center gap-1 cursor-pointer shrink-0"
             >
               {copiedCurl ? (
                 <>
@@ -283,35 +286,35 @@ export function ApiKeyManager({
               )}
             </button>
           </div>
-          <div className="bg-karbon border-2 border-tinta/40 text-tinta p-4 rounded-md font-mono text-xs overflow-x-auto shadow-inner">
-            <pre className="text-cendol">{curlExample}</pre>
+          <div className="bg-karbon border-2 border-tinta/40 text-tinta p-3 sm:p-4 rounded-md font-mono text-xs overflow-x-auto shadow-inner w-full max-w-full">
+            <pre className="text-cendol whitespace-pre-wrap break-all">{curlExample}</pre>
           </div>
         </div>
 
-        <div className="p-4 bg-karbon/80 border-2 border-tinta/30 rounded-md text-xs leading-relaxed space-y-2">
+        <div className="p-3 sm:p-4 bg-karbon/80 border-2 border-tinta/30 rounded-md text-xs leading-relaxed space-y-2 break-words max-w-full min-w-0">
           <p className="font-bold text-sm text-kuning flex items-center gap-1.5">
-            <PiInfoBold className="text-base" /> Parameter yang Didukung:
+            <PiInfoBold className="text-base shrink-0" /> Parameter yang Didukung:
           </p>
           <ul className="list-disc list-inside space-y-1 text-tinta-pudar ml-1">
-            <li>
+            <li className="break-all sm:break-normal">
               <code className="text-tinta font-bold">key</code> (Form-data / JSON) atau header <code className="text-tinta font-bold">X-Boncos-Key</code>: Kode unik rahasia kamu.
             </li>
-            <li>
+            <li className="break-all sm:break-normal">
               <code className="text-tinta font-bold">image</code> atau <code className="text-tinta font-bold">file</code>: Berkas gambar struk (JPEG, PNG, WebP maksimal 10MB) atau string base64 pada JSON.
             </li>
           </ul>
         </div>
 
-        <div className="border-t-2 border-dashed border-tinta/30 pt-4 text-xs text-tinta-pudar space-y-1.5">
+        <div className="border-t-2 border-dashed border-tinta/30 pt-4 text-xs text-tinta-pudar space-y-1.5 break-words">
           <p className="font-bold text-tinta text-sm mb-1">Alur Otomatis:</p>
           <p>
             1. Server memproses OCR di memori secara aman tanpa menyimpan foto ke database atau disk.
           </p>
           <p>
-            2. Jika nominal struk terdeteksi $\rightarrow$ dicatat ke riwayat pengeluaran & kirim rincian ke Telegram.
+            2. Jika nominal struk terdeteksi → dicatat ke riwayat pengeluaran & kirim rincian ke Telegram.
           </p>
           <p>
-            3. Jika struk gagal terbaca $\rightarrow$ kirim notifikasi Telegram bahwa pencatatan gagal beserta alasannya.
+            3. Jika struk gagal terbaca → kirim notifikasi Telegram bahwa pencatatan gagal beserta alasannya.
           </p>
         </div>
       </div>
