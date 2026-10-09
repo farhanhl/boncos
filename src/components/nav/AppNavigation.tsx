@@ -13,6 +13,7 @@ import {
 } from "react-icons/pi";
 import { signOut } from "firebase/auth";
 import { getClientAuth } from "@/lib/firebase/client";
+import { SessionRefresher } from "@/components/auth/SessionRefresher";
 
 interface AppNavigationProps {
   userDisplayName?: string;
@@ -26,6 +27,9 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
     try {
       const auth = getClientAuth();
       await signOut(auth);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("boncos_last_session_refresh");
+      }
       await fetch("/api/auth/session", { method: "DELETE" });
       router.push("/login");
       router.refresh();
@@ -43,6 +47,7 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
 
   return (
     <>
+      <SessionRefresher />
       {/* Desktop Left Rail (>= 1024px) */}
       <aside className="hidden lg:flex flex-col w-60 bg-kertas border-r-2 border-tinta fixed inset-y-0 left-0 p-5 z-30">
         <div className="flex items-center gap-2 mb-8">

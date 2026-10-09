@@ -9,6 +9,7 @@ export const maxDuration = 30;
 
 const sessionSchema = z.object({
   idToken: z.string().min(1, "ID token wajib disertakan"),
+  rememberMe: z.boolean().optional().default(true),
 });
 
 export async function POST(request: Request) {
@@ -27,7 +28,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const sessionRes = await withTimeout(createSession(parsed.data.idToken));
+    const rememberMe = parsed.data.rememberMe ?? true;
+    const sessionRes = await withTimeout(
+      createSession(parsed.data.idToken, rememberMe)
+    );
 
     if (!sessionRes.success || !sessionRes.cookie) {
       const isMissingEnv =
@@ -46,7 +50,10 @@ export async function POST(request: Request) {
     }
 
     const response = NextResponse.json({ ok: true });
-    const days = parseInt(process.env.SESSION_COOKIE_MAX_AGE_DAYS || "5", 10);
+    const envDays = process.env.SESSION_COOKIE_MAX_AGE_DAYS
+      ? parseInt(process.env.SESSION_COOKIE_MAX_AGE_DAYS, 10)
+      : null;
+    const days = rememberMe ? Math.min(envDays || 14, 14) : 1;
     const expiresIn = days * 24 * 60 * 60 * 1000;
 
     response.cookies.set(SESSION_COOKIE_NAME, sessionRes.cookie, {

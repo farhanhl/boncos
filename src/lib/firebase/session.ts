@@ -47,10 +47,18 @@ export interface CreateSessionResult {
 /**
  * Creates and sets a verified Firebase session cookie.
  */
-export async function createSession(idToken: string): Promise<CreateSessionResult> {
+export async function createSession(
+  idToken: string,
+  rememberMe: boolean = true
+): Promise<CreateSessionResult> {
   try {
     const auth = getAdminAuth();
-    const days = parseInt(process.env.SESSION_COOKIE_MAX_AGE_DAYS || "5", 10);
+    const envDays = process.env.SESSION_COOKIE_MAX_AGE_DAYS
+      ? parseInt(process.env.SESSION_COOKIE_MAX_AGE_DAYS, 10)
+      : null;
+    // Firebase Admin createSessionCookie strictly requires expiresIn between 5 minutes and 14 days.
+    // If rememberMe: 14 days (or envDays capped at 14). If false: 1 day.
+    const days = rememberMe ? Math.min(envDays || 14, 14) : 1;
     const expiresIn = days * 24 * 60 * 60 * 1000;
 
     const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn });

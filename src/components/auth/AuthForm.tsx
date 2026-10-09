@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  onAuthStateChanged,
 } from "firebase/auth";
 import { PiEyeBold, PiEyeSlashBold } from "react-icons/pi";
 import { getClientAuth } from "@/lib/firebase/client";
@@ -23,9 +27,40 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Auto-restore session if user previously chose "Remember Me" and client Auth still exists
+  useEffect(() => {
+    if (mode !== "login") return;
+    const auth = getClientAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          setRestoring(true);
+          const idToken = await user.getIdToken();
+          const res = await fetch("/api/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken, rememberMe: true }),
+          });
+          if (res.ok) {
+            router.push(redirectPath);
+            router.refresh();
+            return;
+          }
+        } catch {
+          // ignore, user can login manually
+        } finally {
+          setRestoring(false);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [mode, redirectPath, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +69,12 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       const auth = getClientAuth();
+      // Configure client persistence based on rememberMe
+      await setPersistence(
+        auth,
+        rememberMe ? browserLocalPersistence : browserSessionPersistence
+      );
+
       let idToken = "";
 
       if (mode === "register") {
@@ -62,7 +103,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       const res = await fetch("/api/auth/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({ idToken, rememberMe }),
       });
 
       let data: { ok?: boolean; message?: string; error?: string } = {};
@@ -115,6 +156,12 @@ export function AuthForm({ mode }: AuthFormProps) {
           ? "Masuk dulu biar catatanmu aman."
           : "Catat semua pengeluaranmu mulai sekarang."}
       </p>
+
+      {restoring && (
+        <div className="mb-4 p-3 bg-kuning/20 border-2 border-kuning rounded-md text-tinta text-xs font-bold flex items-center justify-center gap-2">
+          <span className="animate-spin text-base">⏳</span> Memulihkan sesi login kamu…
+        </div>
+      )}
 
       {errorMessage && (
         <div className="mb-4 p-3 bg-stempel/10 border-2 border-stempel rounded-md text-stempel text-sm font-semibold">
@@ -195,9 +242,30 @@ export function AuthForm({ mode }: AuthFormProps) {
           </div>
         </div>
 
+        {mode === "login" && (
+          <div className="flex items-center justify-between py-0.5">
+            <label
+              htmlFor="rememberMe"
+              className="flex items-center gap-2.5 cursor-pointer select-none"
+            >
+              <input
+                id="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-2 border-tinta text-pulpen focus:ring-0 focus:ring-offset-0 cursor-pointer bg-kertas accent-pulpen"
+              />
+              <span className="text-xs font-bold text-tinta">Ingat saya</span>
+            </label>
+            <span className="text-[11px] text-tinta-pudar">
+              {rememberMe ? "Sesi hingga 14 hari" : "Sesi 1 hari"}
+            </span>
+          </div>
+        )}
+
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || restoring}
           className="mt-2 bg-pulpen text-white font-bold border-2 border-tinta rounded-md shadow-hard min-h-11 px-5 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100 w-full disabled:opacity-50 cursor-pointer"
         >
           {loading

@@ -238,7 +238,7 @@ export function ApiKeyManager({
         <div className="space-y-1.5 pt-1 w-full min-w-0">
           <label className="text-xs font-bold text-tinta">URL Endpoint Scan:</label>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full min-w-0">
-            <div className="flex-1 min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-pulpen font-mono text-sm tracking-wide font-bold flex items-center overflow-hidden">
+            <div className="flex-1 min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta font-mono text-sm tracking-wide flex items-center overflow-hidden">
               <span className="truncate select-all min-w-0 w-full block">
                 {scanApiUrl || "/api/scan"}
               </span>
