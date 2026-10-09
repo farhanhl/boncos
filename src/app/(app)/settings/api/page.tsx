@@ -25,7 +25,7 @@ export default async function ApiSettingsPage() {
   const baseUrl = `${proto}://${host}`;
 
   return (
-    <main className="space-y-6 max-w-2xl mx-auto">
+    <main className="space-y-6 max-w-2xl mx-auto w-full min-w-0">
       <div className="text-center sm:text-left">
         <h1 className="font-display text-3xl md:text-4xl text-tinta">
           Pengaturan
