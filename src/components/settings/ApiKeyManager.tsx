@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   PiKeyBold,
   PiCopyBold,
@@ -13,6 +13,9 @@ import {
   PiInfoBold,
 } from "react-icons/pi";
 import { regenerateUserIngestionKey, type IngestionKeyData } from "@/actions/ingestion";
+
+const emptySubscribe = () => () => {};
+const getWindowOrigin = () => (typeof window !== "undefined" ? window.location.origin : "");
 
 interface ApiKeyManagerProps {
   initialKeyData: IngestionKeyData | null;
@@ -30,19 +33,13 @@ export function ApiKeyManager({
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedCurl, setCopiedCurl] = useState(false);
-  const [origin, setOrigin] = useState<string>(baseUrl || "");
+  const clientOrigin = useSyncExternalStore(emptySubscribe, getWindowOrigin, () => "");
+  const origin = clientOrigin || baseUrl || "";
   const [regenerating, setRegenerating] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
-
-  // Synchronize origin dynamically with client window.location.origin
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.location.origin) {
-      setOrigin(window.location.origin);
-    }
-  }, []);
 
   const scanApiUrl = `${origin ? origin.replace(/\/$/, "") : ""}/api/scan`;
 
