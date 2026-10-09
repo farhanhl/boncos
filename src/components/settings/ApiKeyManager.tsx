@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   PiKeyBold,
   PiCopyBold,
@@ -17,27 +17,62 @@ import { regenerateUserIngestionKey, type IngestionKeyData } from "@/actions/ing
 interface ApiKeyManagerProps {
   initialKeyData: IngestionKeyData | null;
   telegramEnabled: boolean;
+  baseUrl?: string;
 }
 
 export function ApiKeyManager({
   initialKeyData,
   telegramEnabled,
+  baseUrl,
 }: ApiKeyManagerProps) {
   const [key, setKey] = useState<string>(initialKeyData?.key || "");
   const [showKey, setShowKey] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedCurl, setCopiedCurl] = useState(false);
+  const [origin, setOrigin] = useState<string>(baseUrl || "");
   const [regenerating, setRegenerating] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  const handleCopy = async () => {
+  // Synchronize origin dynamically with client window.location.origin
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.origin) {
+      setOrigin(window.location.origin);
+    }
+  }, []);
+
+  const scanApiUrl = `${origin ? origin.replace(/\/$/, "") : ""}/api/scan`;
+
+  const handleCopyKey = async () => {
     if (!key) return;
     try {
       await navigator.clipboard.writeText(key);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedKey(true);
+      setTimeout(() => setCopiedKey(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
+
+  const handleCopyUrl = async () => {
+    if (!scanApiUrl) return;
+    try {
+      await navigator.clipboard.writeText(scanApiUrl);
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
+
+  const handleCopyCurl = async () => {
+    try {
+      await navigator.clipboard.writeText(curlExample);
+      setCopiedCurl(true);
+      setTimeout(() => setCopiedCurl(false), 2000);
     } catch {
       // fallback
     }
@@ -76,7 +111,7 @@ export function ApiKeyManager({
     }
   };
 
-  const curlExample = `curl -X POST http://localhost:3000/api/scan \\
+  const curlExample = `curl -X POST ${scanApiUrl || "http://localhost:3000/api/scan"} \\
   -F "key=${key || "KODE_UNIK_KAMU"}" \\
   -F "image=@struk_belanja.jpg"`;
 
@@ -156,10 +191,10 @@ export function ApiKeyManager({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleCopy}
+              onClick={handleCopyKey}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 min-h-11 bg-kuning text-karbon font-bold border-2 border-tinta rounded-md shadow-hard hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-sm cursor-pointer"
             >
-              {copied ? (
+              {copiedKey ? (
                 <>
                   <PiCheckBold className="text-base text-karbon" />
                   <span>Tersalin!</span>
@@ -196,11 +231,61 @@ export function ApiKeyManager({
         </div>
 
         <p className="text-xs text-tinta-pudar leading-relaxed">
-          Kirim request HTTP <code className="bg-karbon text-kuning px-1.5 py-0.5 rounded border border-tinta/20">POST</code> ke endpoint <code className="bg-karbon text-kuning px-1.5 py-0.5 rounded border border-tinta/20">/api/scan</code> dengan menyertakan file gambar dan kode unik kamu. Endpoint ini tidak memerlukan session login.
+          Kirim request HTTP <code className="bg-karbon text-kuning px-1.5 py-0.5 rounded border border-tinta/20">POST</code> ke endpoint scan di bawah dengan menyertakan file gambar struk dan kode unik kamu. Endpoint ini tidak memerlukan session login.
         </p>
 
-        <div className="space-y-1.5">
-          <span className="text-xs font-bold text-tinta">Contoh Perintah cURL:</span>
+        {/* URL Endpoint Scan dengan Tombol Salin */}
+        <div className="space-y-1.5 pt-1">
+          <label className="text-xs font-bold text-tinta">URL Endpoint Scan:</label>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex-1 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-pulpen font-mono text-sm tracking-wide font-bold flex items-center justify-between overflow-hidden">
+              <span className="truncate select-all">
+                {scanApiUrl || "/api/scan"}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCopyUrl}
+              className="flex items-center justify-center gap-1.5 px-4 min-h-11 bg-kuning text-karbon font-bold border-2 border-tinta rounded-md shadow-hard hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-sm cursor-pointer shrink-0"
+            >
+              {copiedUrl ? (
+                <>
+                  <PiCheckBold className="text-base text-karbon" />
+                  <span>Tersalin!</span>
+                </>
+              ) : (
+                <>
+                  <PiCopyBold className="text-base" />
+                  <span>Salin Endpoint</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Contoh cURL */}
+        <div className="space-y-1.5 pt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-tinta">Contoh Perintah cURL:</span>
+            <button
+              type="button"
+              onClick={handleCopyCurl}
+              className="text-xs font-bold text-pulpen hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              {copiedCurl ? (
+                <>
+                  <PiCheckBold className="text-sm text-cendol" />
+                  <span className="text-cendol">cURL Tersalin!</span>
+                </>
+              ) : (
+                <>
+                  <PiCopyBold className="text-sm" />
+                  <span>Salin cURL</span>
+                </>
+              )}
+            </button>
+          </div>
           <div className="bg-karbon border-2 border-tinta/40 text-tinta p-4 rounded-md font-mono text-xs overflow-x-auto shadow-inner">
             <pre className="text-cendol">{curlExample}</pre>
           </div>

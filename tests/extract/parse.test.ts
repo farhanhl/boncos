@@ -312,5 +312,21 @@ KASIR 01
       expect(parsed.amount.value).toBe(null);
       expect(parsed.extraction_confidence).toBeLessThan(0.5);
     });
+
+    it("cleans avatar and bullet icon OCR noise (like 3 or e) before recipient name", () => {
+      const rawSeaBank = `
+@ seaBank
+Bukti Transaksi
+Rp 15.000
+Dari oy Muhammad Putra Naufal
+Ke 3 Ariman Tri Bawono
+BCA: ******3173
+Jumlah Total Rp 15.000
+Waktu Transaksi 10 Sep 2026, 07:01
+      `.trim();
+
+      const parsed = parseReceiptText(rawSeaBank);
+      expect(parsed.name.value).toBe("Transfer ke Ariman Tri Bawono");
+    });
   });
 });

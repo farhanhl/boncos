@@ -82,6 +82,20 @@ const GENERIC_KEYWORDS = [
   "DAFTAR RIWAYAT HIDUP",
 ];
 
+function cleanRecipientCandidate(raw: string): string {
+  let cleaned = raw.replace(/^[®@©\*\-><~•|#_:\s]+/, "").trim();
+  // Strip leading digit artifact e.g. "3 Ariman Tri Bawono" -> "Ariman Tri Bawono"
+  cleaned = cleaned.replace(/^\d+\s+(?=[a-zA-Z])/i, "").trim();
+  // Strip leading 1-2 letter avatar noise e.g. "e Ariman", "oy Muhammad"
+  cleaned = cleaned
+    .replace(/^(?!(?:PT|CV|UD)\b)[a-z]{1,2}\s+(?=[a-zA-Z]{2,})/i, (match) => {
+      if (/^(?:PT|CV|UD)$/i.test(match.trim())) return match;
+      return "";
+    })
+    .trim();
+  return cleaned;
+}
+
 export function extractName(
   lines: NormalizedLine[],
   docType: DocumentType
@@ -96,17 +110,16 @@ export function extractName(
         const regex = new RegExp(`^${label}\\s*[:\\-]?\\s*(.*)$`, "i");
         const match = line.normalized.match(regex);
         if (match) {
-          let nameCandidate = match[1]?.trim() || "";
+          let nameCandidate = cleanRecipientCandidate(match[1]?.trim() || "");
 
-          // If empty, clean decorative characters or if purely digits (e.g. account number), search next non-empty line
-          nameCandidate = nameCandidate.replace(/^[®@\*\-><\s]+/, "").trim();
+          // If empty, or purely digits (e.g. account number), search next non-empty line
           if (!nameCandidate || /^\d[\d\s\-]*$/.test(nameCandidate)) {
             let nextIdx = i + 1;
             while (nextIdx < lines.length && !lines[nextIdx]?.normalized.trim()) {
               nextIdx++;
             }
             if (nextIdx < lines.length) {
-              const nextCandidate = lines[nextIdx]?.normalized.replace(/^[®@\*\-><\s]+/, "").trim() || "";
+              const nextCandidate = cleanRecipientCandidate(lines[nextIdx]?.normalized || "");
               if (nextCandidate && /[a-zA-Z]/.test(nextCandidate)) {
                 nameCandidate = nextCandidate;
               }
