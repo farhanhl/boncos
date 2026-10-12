@@ -59,7 +59,13 @@ const EWALLET_KEYWORDS = [
   "OVO",
   "DANA",
   "SHOPEEPAY",
+  "SHOPEE PAY",
+  "SHOPEE",
   "LINKAJA",
+  "PAYMENT DETAILS",
+  "PAYMENT TIME",
+  "YOU PAID",
+  "SPLIT BILL",
 ];
 
 export function detectDocumentType(lines: NormalizedLine[]): DocumentType {

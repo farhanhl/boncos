@@ -113,10 +113,23 @@ const GENERIC_KEYWORDS = [
   "TOTAL REWARDS",
   "PROMOTION DETAILS",
   "PAYMENT DETAILS",
+  "PAYMENT TIME",
+  "PAYMENT VERIFICATION",
+  "SKIPPING PAYMENT VERIFICATION",
+  "PAYMENT VERIF",
+  "SEAMLESS AND SECURE PAYMENT",
+  "SEAMLESS",
+  "YOU PAID",
+  "ENABLE",
   "ENJOY SEAMLESS",
   "SPLIT BILL",
   "VIEW MORE",
   "KLAIM",
+  "PENERIMA",
+  "PENGIRIM",
+  "BENEFICIARY",
+  "BENEFICIARY NAME",
+  "NAMA MERCHANT",
 ];
 
 function cleanRecipientCandidate(raw: string): string {
@@ -137,57 +150,62 @@ export function extractName(
   lines: NormalizedLine[],
   docType: DocumentType
 ): Field<string> {
-  // Strategy 1: E-wallet / Bank Transfer
-  if (docType === "ewallet" || docType === "bank_transfer") {
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line) continue;
+  // Strategy 1: Explicit recipient / beneficiary labels (E-wallet, Bank Transfer, or Labeled receipts)
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
 
-      for (const label of EWALLET_NAME_LABELS) {
-        const regex = new RegExp(`^(?:[®@©\\*\\-><~•|#_:\\(\\)\\[\\]\\{\\}\\/\\d\\s]*)${label}\\s*[:\\-]?\\s*(.*)$`, "i");
-        const match = line.normalized.match(regex);
-        if (match) {
-          let nameCandidate = cleanRecipientCandidate(match[1]?.trim() || "");
+    for (const label of EWALLET_NAME_LABELS) {
+      const regex = new RegExp(
+        `^(?:[®@©\\*\\-><~•|#_:\\(\\)\\[\\]\\{\\}\\/\\d\\s]*)(?:PAYMENT DETAILS\\s+)?(?:\\b${label}\\b|${label})(?:\\s*[:\\-]\\s*|\\s+|$)(.*)$`,
+        "i"
+      );
+      const match = line.normalized.match(regex);
+      if (match) {
+        let nameCandidate = cleanRecipientCandidate(match[1]?.trim() || "");
 
-          // If empty, or purely digits (e.g. account number), search next non-empty line
-          if (!nameCandidate || /^\d[\d\s\-]*$/.test(nameCandidate)) {
-            let nextIdx = i + 1;
-            while (nextIdx < lines.length && !lines[nextIdx]?.normalized.trim()) {
-              nextIdx++;
-            }
-            if (nextIdx < lines.length) {
-              const nextCandidate = cleanRecipientCandidate(lines[nextIdx]?.normalized || "");
-              if (nextCandidate && /[a-zA-Z]/.test(nextCandidate)) {
-                nameCandidate = nextCandidate;
-              }
+        // If empty, or purely digits (e.g. account number), search next non-empty line
+        if (!nameCandidate || /^\d[\d\s\-]*$/.test(nameCandidate)) {
+          let nextIdx = i + 1;
+          while (nextIdx < lines.length && !lines[nextIdx]?.normalized.trim()) {
+            nextIdx++;
+          }
+          if (nextIdx < lines.length) {
+            const nextCandidate = cleanRecipientCandidate(lines[nextIdx]?.normalized || "");
+            if (nextCandidate && /[a-zA-Z]/.test(nextCandidate)) {
+              nameCandidate = nextCandidate;
             }
           }
+        }
 
-          if (nameCandidate && nameCandidate.length >= 2) {
-            let finalName = toTitleCase(nameCandidate);
-            const lowerFinal = finalName.toLowerCase();
-            const hasResiOrTransfer = lines.some((l) =>
-              /\b(RESI|BUKTI|TRANSFER)\b/i.test(l.normalized)
-            );
-            if (label === "DITRANSFER KE" && !lowerFinal.startsWith("ditransfer ke")) {
-              finalName = `Ditransfer ke ${finalName}`;
-            } else if (
-              (docType === "bank_transfer" ||
-                hasResiOrTransfer ||
-                label === "TO" ||
-                label === "TRANSFER TO" ||
-                label === "PENERIMA") &&
-              !lowerFinal.startsWith("transfer ke") &&
-              !lowerFinal.startsWith("ditransfer ke")
-            ) {
-              finalName = `Transfer ke ${finalName}`;
-            }
-            return {
-              value: finalName.slice(0, 60),
-              confidence: 0.85,
-              rule: `ewallet_label:${label}`,
-            };
+        if (
+          nameCandidate &&
+          nameCandidate.length >= 2 &&
+          !GENERIC_KEYWORDS.some((kw) => nameCandidate.toUpperCase().includes(kw))
+        ) {
+          let finalName = toTitleCase(nameCandidate);
+          const lowerFinal = finalName.toLowerCase();
+          const hasResiOrTransfer = lines.some((l) =>
+            /\b(RESI|BUKTI|TRANSFER)\b/i.test(l.normalized)
+          );
+          if (label === "DITRANSFER KE" && !lowerFinal.startsWith("ditransfer ke")) {
+            finalName = `Ditransfer ke ${finalName}`;
+          } else if (
+            (docType === "bank_transfer" ||
+              hasResiOrTransfer ||
+              label === "TO" ||
+              label === "TRANSFER TO" ||
+              label === "PENERIMA") &&
+            !lowerFinal.startsWith("transfer ke") &&
+            !lowerFinal.startsWith("ditransfer ke")
+          ) {
+            finalName = `Transfer ke ${finalName}`;
           }
+          return {
+            value: finalName.slice(0, 60),
+            confidence: 0.85,
+            rule: `ewallet_label:${label}`,
+          };
         }
       }
     }
