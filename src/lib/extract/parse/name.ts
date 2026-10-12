@@ -12,6 +12,7 @@ const EWALLET_NAME_LABELS = [
   "MERCHANT",
   "TUJUAN",
   "KE",
+  "TO",
 ];
 
 const KNOWN_MERCHANTS = [
@@ -80,10 +81,33 @@ const GENERIC_KEYWORDS = [
   "SERTIFIKAT",
   "CURRICULUM VITAE",
   "DAFTAR RIWAYAT HIDUP",
+  "PEMBAYARAN BERHASIL",
+  "TRANSAKSI BERHASIL",
+  "TRANSFER BERHASIL",
+  "PEMBAYARAN SUKSES",
+  "TRANSAKSI SUKSES",
+  "TRANSFER SUKSES",
+  "BERHASIL",
+  "SUCCESS",
+  "SUCCESSFUL",
+  "PAYMENT SUCCESSFUL",
+  "TRANSACTION SUCCESSFUL",
+  "TRANSFER SUCCESSFUL",
+  "LIHAT RESI",
+  "BAGIKAN RESI",
+  "BAGIKAN BUKTI",
+  "UNDUH RESI",
+  "UNDUH BUKTI",
+  "BUKTI PEMBAYARAN",
+  "BUKTI TRANSAKSI",
+  "BUKTI TRANSFER",
+  "NOMINAL TRANSAKSI",
+  "NOMINAL PEMBAYARAN",
+  "NOMINAL TRANSFER",
 ];
 
 function cleanRecipientCandidate(raw: string): string {
-  let cleaned = raw.replace(/^[®@©\*\-><~•|#_:\s]+/, "").trim();
+  let cleaned = raw.replace(/^[®@©\*\-><~•|#_:\(\)\[\]\{\}\s]+/, "").trim();
   // Strip leading digit artifact e.g. "3 Ariman Tri Bawono" -> "Ariman Tri Bawono"
   cleaned = cleaned.replace(/^\d+\s+(?=[a-zA-Z])/i, "").trim();
   // Strip leading 1-2 letter avatar noise e.g. "e Ariman", "oy Muhammad"
@@ -163,15 +187,20 @@ export function extractName(
     // Must have length >= 3
     if (norm.length < 3) continue;
 
+    // Filter out short icon/status bar noise lines (e.g. "x Dr") where words are tiny and not a known merchant
+    const words = norm.split(/\s+/).filter(Boolean);
+    const letterChars = norm.match(/[a-zA-Z]/g) || [];
+    const isKnown = KNOWN_MERCHANTS.some((m) => upper.includes(m));
+    if (!isKnown && (letterChars.length < 4 || words.every((w) => w.length <= 2))) {
+      continue;
+    }
+
     // Check consecutive digits >= 9 (phone / tax / receipt numbers)
     if (/\d{9,}/.test(norm)) continue;
 
     // Check letter ratio >= 0.5 (handles store codes like "SPBU 34-12345")
-    const letterCount = (norm.match(/[a-zA-Z]/g) || []).length;
+    const letterCount = letterChars.length;
     if (letterCount / norm.length < 0.5) continue;
-
-    // Check if matches known merchant dictionary
-    const isKnown = KNOWN_MERCHANTS.some((m) => upper.includes(m));
 
     // Must NOT be address or phone keywords (unless known merchant matched)
     if (!isKnown && ADDRESS_PHONE_REGEX.test(norm)) continue;

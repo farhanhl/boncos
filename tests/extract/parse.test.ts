@@ -328,5 +328,84 @@ Waktu Transaksi 10 Sep 2026, 07:01
       const parsed = parseReceiptText(rawSeaBank);
       expect(parsed.name.value).toBe("Transfer ke Ariman Tri Bawono");
     });
+
+    it("correctly extracts recipient name and amount from Mandiri Livin payment", () => {
+      const rawMandiri = `
+14.28 = wi! 5G
+Pembayaran Berhasil!
+a
+Lihat Resi
+KING DIGI
+JAKARTA PUSAT
+Rp 3.221
+ao Bagikan Resi
+      `.trim();
+
+      const parsed = parseReceiptText(rawMandiri);
+      expect(parsed.doc_type).toBe("ewallet");
+      expect(parsed.amount.value).toBe(3221);
+      expect(parsed.name.value).toBe("King Digi");
+      expect(parsed.name.value).not.toBe("Pembayaran Berhasil!");
+      expect(parsed.name.value).not.toBe("Lihat Resi");
+      expect(parsed.extraction_confidence).toBeGreaterThanOrEqual(0.5);
+    });
+
+    it("correctly extracts date when present on Mandiri Livin payment receipt", () => {
+      const rawMandiriWithDate = `
+Pembayaran Berhasil!
+09 Okt 2026 • 14:28:06 WIB
+Lihat Resi
+Penerima
+KING DIGI
+JAKARTA PUSAT
+Nominal Transaksi
+Rp 3.221
+      `.trim();
+
+      const parsed = parseReceiptText(rawMandiriWithDate);
+      expect(parsed.doc_type).toBe("ewallet");
+      expect(parsed.amount.value).toBe(3221);
+      expect(parsed.name.value).toBe("King Digi");
+      expect(parsed.expense_date.value).toBe("2026-10-09");
+      expect(parsed.status).toBe("ok");
+    });
+
+    it("correctly extracts ShopeePay merchant payment with You Paid and To label", () => {
+      const rawShopeePayParking = `
+0200 QED « sa
+x Dr
+rp 10.000
+& Total Rewards Rp150
+
+&
+Diskon s.d. 10RB
+@App Store
+Voucher ShopeePay
+App Store 2—
+1 Enjoy seamless and secure payment Enable >
+am By skipping payment verification
+Payment Details
+To @© PELATARAN PARKIRAN MANGKU
+Payment Time 09 Oct 2026, 07:09PM
+You Paid Rp10.000
+View More x
+Promotion Details | to
+oe »
+H- Cashback Rp50 1 share &
+ka cela
+      `.trim();
+
+      const parsed = parseReceiptText(rawShopeePayParking);
+      expect(parsed.doc_type).toBe("ewallet");
+      expect(parsed.amount.value).toBe(10000);
+      expect(parsed.amount.value).not.toBe(150); // Total Rewards ignored
+      expect(parsed.amount.value).not.toBe(50); // Cashback ignored
+      expect(parsed.name.value).toBe("Pelataran Parkiran Mangku");
+      expect(parsed.name.value).not.toBe("X Dr");
+      expect(parsed.expense_date.value).toBe("2026-10-09");
+      expect(parsed.category_suggestion.value).toBe("transport");
+      expect(parsed.status).toBe("ok");
+      expect(parsed.extraction_confidence).toBeGreaterThanOrEqual(0.8);
+    });
   });
 });
