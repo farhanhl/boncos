@@ -104,6 +104,19 @@ const GENERIC_KEYWORDS = [
   "NOMINAL TRANSAKSI",
   "NOMINAL PEMBAYARAN",
   "NOMINAL TRANSFER",
+  "APP STORE",
+  "GOOGLE PLAY",
+  "PLAY STORE",
+  "VOUCHER",
+  "HADIAH VOUCHER",
+  "CASHBACK",
+  "TOTAL REWARDS",
+  "PROMOTION DETAILS",
+  "PAYMENT DETAILS",
+  "ENJOY SEAMLESS",
+  "SPLIT BILL",
+  "VIEW MORE",
+  "KLAIM",
 ];
 
 function cleanRecipientCandidate(raw: string): string {
@@ -131,7 +144,7 @@ export function extractName(
       if (!line) continue;
 
       for (const label of EWALLET_NAME_LABELS) {
-        const regex = new RegExp(`^${label}\\s*[:\\-]?\\s*(.*)$`, "i");
+        const regex = new RegExp(`^(?:[®@©\\*\\-><~•|#_:\\(\\)\\[\\]\\{\\}\\/\\d\\s]*)${label}\\s*[:\\-]?\\s*(.*)$`, "i");
         const match = line.normalized.match(regex);
         if (match) {
           let nameCandidate = cleanRecipientCandidate(match[1]?.trim() || "");
@@ -188,8 +201,8 @@ export function extractName(
     let norm = line.normalized.trim();
     const upper = line.upper;
 
-    // Strip leading decoration/app noise: e.g. "Hb ", "< ", "> "
-    norm = norm.replace(/^(?:Hb|<|>|[\[\(]\w+[\]\)])\s+/i, "").trim();
+    // Strip leading decoration/app noise: e.g. "Hb ", "< ", "> ", "@", "®"
+    norm = norm.replace(/^(?:Hb|<|>|[\[\(]\w+[\]\)]|[®@©\*\-><~•|#_:\(\)\[\]\{\}\/]+)\s*/i, "").trim();
 
     // Must have length >= 3
     if (norm.length < 3) continue;
