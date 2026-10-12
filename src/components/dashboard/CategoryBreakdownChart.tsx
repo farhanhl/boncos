@@ -12,8 +12,12 @@ export function CategoryBreakdownChart({
 }: CategoryBreakdownChartProps) {
   if (items.length === 0) {
     return (
-      <div className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard text-center text-tinta-pudar text-sm">
-        Belum ada data kategori untuk bulan ini.
+      <div className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard text-center space-y-2">
+        <div className="text-2xl">📊</div>
+        <div className="font-bold text-sm text-tinta">Belum ada data kategori</div>
+        <p className="text-xs text-tinta-pudar max-w-xs mx-auto">
+          Grafik komposisi pengeluaran akan otomatis muncul begitu kamu mencatat transaksi pada bulan ini.
+        </p>
       </div>
     );
   }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatRupiah } from "@/lib/money";
 import type { ExpenseRecord } from "@/types/expense";
 
@@ -53,23 +54,41 @@ export function HeroNota({
 
       {/* Daftar Baris Pengeluaran Terbesar */}
       {topExpenses.length === 0 ? (
-        <div className="py-8 text-center text-tinta-dark/60 text-sm">
-          Belum ada jajan tercatat pada periode ini.
+        <div className="py-8 px-4 text-center space-y-2.5">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-tinta-dark/10 text-tinta-dark text-xl mx-auto">
+            🧾
+          </div>
+          <div className="text-sm font-bold text-tinta-dark">
+            Belum ada jajan tercatat
+          </div>
+          <p className="text-xs text-tinta-dark/70 max-w-xs mx-auto">
+            Foto struk atau isi manual untuk melihat 5 pengeluaran terbesarmu di sini.
+          </p>
+          <div className="pt-1.5">
+            <Link
+              href="/expenses/new?tab=scan"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tinta-dark text-kertas-nota text-xs font-bold rounded-md shadow-hard-sm hover:brightness-125 active:translate-x-[1px] active:translate-y-[1px] transition-all cursor-pointer"
+            >
+              <span>Foto Struk Pertama →</span>
+            </Link>
+          </div>
         </div>
       ) : (
-        <div className="space-y-2 mb-6">
+        <div className="space-y-1.5 mb-6">
           {topExpenses.map((e) => (
-            <div
+            <Link
               key={e.id}
-              className="flex justify-between items-center text-sm py-1.5 border-b border-dashed border-tinta-dark/20"
+              href={`/expenses/${e.id}`}
+              className="flex justify-between items-center text-sm py-1.5 px-1.5 -mx-1.5 rounded border-b border-dashed border-tinta-dark/20 hover:bg-tinta-dark/5 transition-colors group cursor-pointer"
+              title={`Lihat detail ${e.name}`}
             >
-              <span className="font-semibold text-tinta-dark truncate max-w-[200px]">
+              <span className="font-semibold text-tinta-dark truncate flex-1 min-w-0 mr-3 group-hover:underline">
                 {e.name}
               </span>
-              <span className="font-bold tabular-nums text-tinta-dark">
+              <span className="font-bold tabular-nums text-tinta-dark shrink-0">
                 {formatRupiah(e.amount)}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       )}
