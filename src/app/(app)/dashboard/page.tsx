@@ -33,9 +33,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   return (
     <main className="space-y-6">
       {/* Top Banner */}
-      <div>
+      <div className="text-center sm:text-left">
         <h1 className="font-display text-3xl md:text-4xl text-tinta">
-          Dashboard
+          Boncos
         </h1>
         <p className="text-xs md:text-sm text-tinta-pudar mt-0.5">
           Pantau boncosmu bulan ini sebelum kantong jebol.

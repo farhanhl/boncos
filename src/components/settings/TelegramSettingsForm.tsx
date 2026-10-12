@@ -128,11 +128,10 @@ export function TelegramSettingsForm({
       {/* Feedback Message */}
       {feedback && (
         <div
-          className={`mb-4 p-3 rounded-md border-2 font-bold text-sm ${
-            feedback.type === "success"
-              ? "bg-cendol/20 border-cendol text-tinta"
-              : "bg-stempel/10 border-stempel text-stempel"
-          }`}
+          className={`mb-4 p-3 rounded-md border-2 font-bold text-sm ${feedback.type === "success"
+            ? "bg-cendol/20 border-cendol text-tinta"
+            : "bg-stempel/10 border-stempel text-stempel"
+            }`}
         >
           {feedback.text}
         </div>
@@ -209,10 +208,10 @@ export function TelegramSettingsForm({
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              title="Hapus Pengaturan"
-              className="p-2 border-2 border-tinta rounded-md hover:bg-stempel hover:text-white transition-colors cursor-pointer"
+              className="bg-kertas text-tinta font-bold border-2 border-tinta rounded-md shadow-hard min-h-11 px-4 flex items-center justify-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] cursor-pointer disabled:opacity-50"
             >
-              <PiTrashBold className="text-xl" />
+              <PiTrashBold className="text-lg" />
+              <span>Hapus Pengaturan</span>
             </button>
           )}
         </div>

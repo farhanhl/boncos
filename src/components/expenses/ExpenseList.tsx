@@ -269,7 +269,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
     <div className="space-y-6">
       {/* Header + CTA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+        <div className="text-center sm:text-left">
           <h1 className="font-display text-3xl md:text-4xl text-tinta">
             Daftar Pengeluaran
           </h1>
