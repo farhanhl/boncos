@@ -45,6 +45,48 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
     { href: "/settings/notifications", label: "Atur", icon: PiGearBold },
   ];
 
+  const isItemActive = (href: string) => {
+    if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === "/expenses") {
+      return pathname.startsWith("/expenses") && !pathname.startsWith("/expenses/new");
+    }
+    if (href === "/settings/categories") {
+      return pathname.startsWith("/settings/categories");
+    }
+    if (href === "/settings/notifications") {
+      return pathname.startsWith("/settings") && !pathname.startsWith("/settings/categories");
+    }
+    return pathname.startsWith(href);
+  };
+
+  const renderMobileNavItem = (item: (typeof navItems)[number]) => {
+    const isActive = isItemActive(item.href);
+    const Icon = item.icon;
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`flex flex-col items-center justify-center py-1 px-3 min-w-[56px] transition-colors ${
+          isActive
+            ? "text-tinta font-bold"
+            : "text-tinta-pudar hover:text-tinta font-medium"
+        }`}
+      >
+        <Icon className={`text-2xl transition-transform ${isActive ? "scale-105" : ""}`} />
+        <span className="text-[11px] leading-tight mt-0.5">
+          {item.label}
+        </span>
+        <span
+          className={`w-5 h-[3px] rounded-full mt-1 transition-all duration-150 ${
+            isActive ? "bg-kuning scale-x-100 opacity-100" : "bg-transparent scale-x-0 opacity-0"
+          }`}
+          aria-hidden="true"
+        />
+      </Link>
+    );
+  };
+
   return (
     <>
       <SessionRefresher />
@@ -71,12 +113,7 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
         {/* Navigation Links */}
         <nav className="flex flex-col gap-2 flex-1">
           {navItems.map((item) => {
-            const isActive =
-              item.href === "/dashboard"
-                ? pathname === "/dashboard"
-                : item.href === "/settings/notifications"
-                ? pathname.startsWith("/settings") && !pathname.startsWith("/settings/categories")
-                : pathname.startsWith(item.href);
+            const isActive = isItemActive(item.href);
             const Icon = item.icon;
 
             return (
@@ -126,30 +163,8 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
       </aside>
 
       {/* Mobile Bottom Bar (< 1024px) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-kertas border-t-2 border-tinta h-16 px-4 z-40 flex items-center justify-around">
-        {/* Beranda */}
-        <Link
-          href="/dashboard"
-          className={`flex flex-col items-center justify-center p-1 rounded-md ${
-            pathname === "/dashboard" ? "text-pulpen font-bold" : "text-tinta"
-          }`}
-        >
-          <PiHouseBold className="text-2xl" />
-          <span className="text-[11px] font-bold">Beranda</span>
-        </Link>
-
-        {/* Daftar */}
-        <Link
-          href="/expenses"
-          className={`flex flex-col items-center justify-center p-1 rounded-md ${
-            pathname.startsWith("/expenses") && !pathname.startsWith("/expenses/new")
-              ? "text-pulpen font-bold"
-              : "text-tinta"
-          }`}
-        >
-          <PiReceiptBold className="text-2xl" />
-          <span className="text-[11px] font-bold">Daftar</span>
-        </Link>
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-kertas border-t-2 border-tinta h-16 px-2 sm:px-4 z-40 flex items-center justify-around">
+        {navItems.slice(0, 2).map(renderMobileNavItem)}
 
         {/* Floating Scan CTA */}
         <div className="-mt-8">
@@ -162,31 +177,7 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
           </Link>
         </div>
 
-        {/* Kategori */}
-        <Link
-          href="/settings/categories"
-          className={`flex flex-col items-center justify-center p-1 rounded-md ${
-            pathname.startsWith("/settings/categories")
-              ? "text-pulpen font-bold"
-              : "text-tinta"
-          }`}
-        >
-          <PiTagBold className="text-2xl" />
-          <span className="text-[11px] font-bold">Kategori</span>
-        </Link>
-
-        {/* Atur */}
-        <Link
-          href="/settings/notifications"
-          className={`flex flex-col items-center justify-center p-1 rounded-md ${
-            pathname.startsWith("/settings") && !pathname.startsWith("/settings/categories")
-              ? "text-pulpen font-bold"
-              : "text-tinta"
-          }`}
-        >
-          <PiGearBold className="text-2xl" />
-          <span className="text-[11px] font-bold">Atur</span>
-        </Link>
+        {navItems.slice(2).map(renderMobileNavItem)}
       </nav>
     </>
   );

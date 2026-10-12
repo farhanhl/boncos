@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { PiCameraBold, PiPlusBold } from "react-icons/pi";
 import { getDashboardSummary } from "@/actions/dashboard";
 import { HeroNota } from "@/components/dashboard/HeroNota";
 import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard";
@@ -10,7 +8,7 @@ import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Beranda — Boncos",
+  title: "Dashboard — Boncos",
 };
 
 interface DashboardPageProps {
@@ -34,33 +32,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <main className="space-y-6">
-      {/* Top Banner / Actions for Mobile */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl md:text-4xl text-tinta">
-            Catatan Jajan
-          </h1>
-          <p className="text-xs md:text-sm text-tinta-pudar mt-0.5">
-            Pantau boncosmu bulan ini sebelum kantong jebol.
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <Link
-            href="/expenses/new?tab=scan"
-            className="bg-kuning text-karbon font-bold border-2 border-karbon rounded-md shadow-hard min-h-11 px-4 flex items-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow]"
-          >
-            <PiCameraBold className="text-xl text-karbon" />
-            <span className="hidden sm:inline text-karbon">Baca Struk</span>
-          </Link>
-          <Link
-            href="/expenses/new?tab=manual"
-            className="bg-pulpen text-white font-bold border-2 border-tinta rounded-md shadow-hard min-h-11 px-4 flex items-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow]"
-          >
-            <PiPlusBold className="text-xl" />
-            <span className="hidden sm:inline">Isi Manual</span>
-          </Link>
-        </div>
+      {/* Top Banner */}
+      <div>
+        <h1 className="font-display text-3xl md:text-4xl text-tinta">
+          Dashboard
+        </h1>
+        <p className="text-xs md:text-sm text-tinta-pudar mt-0.5">
+          Pantau boncosmu bulan ini sebelum kantong jebol.
+        </p>
       </div>
 
       {/* Month & Year Filter Picker */}

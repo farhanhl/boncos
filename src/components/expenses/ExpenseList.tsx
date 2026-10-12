@@ -15,6 +15,7 @@ import {
   PiCameraBold,
   PiPlusBold,
   PiDownloadSimpleBold,
+  PiArrowCounterClockwiseBold,
 } from "react-icons/pi";
 import { formatRupiah } from "@/lib/money";
 import { DEFAULT_CATEGORY_LIST, getCategoryById } from "@/lib/categories";
@@ -156,31 +157,38 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2.5 w-full sm:w-auto">
+          {/* Tombol Utama: Baca Struk (Full width di baris atas mobile) */}
+          <Link
+            href="/expenses/new?tab=scan"
+            className={`${
+              filteredExpenses.length > 0 ? "col-span-2" : "col-span-1"
+            } sm:col-auto bg-kuning text-karbon font-bold border-2 border-karbon rounded-md shadow-hard min-h-11 px-4 flex items-center justify-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100 sm:order-2`}
+          >
+            <PiCameraBold className="text-xl text-karbon shrink-0" />
+            <span className="text-karbon">Baca Struk</span>
+          </Link>
+
+          {/* Tombol Kedua: Isi Manual */}
+          <Link
+            href="/expenses/new?tab=manual"
+            className="col-span-1 sm:col-auto bg-pulpen text-white font-bold border-2 border-tinta rounded-md shadow-hard min-h-11 px-4 flex items-center justify-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100 sm:order-3"
+          >
+            <PiPlusBold className="text-xl shrink-0" />
+            <span>Isi Manual</span>
+          </Link>
+
+          {/* Tombol Ketiga: Export CSV */}
           {filteredExpenses.length > 0 && (
             <button
               onClick={handleExportCsv}
               title="Unduh file CSV"
-              className="bg-kertas text-tinta font-bold border-2 border-tinta rounded-md shadow-hard min-h-11 px-3 flex items-center gap-1.5 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100 cursor-pointer text-xs sm:text-sm"
+              className="col-span-1 sm:col-auto bg-kertas text-tinta font-bold border-2 border-tinta rounded-md shadow-hard min-h-11 px-3 flex items-center justify-center gap-1.5 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100 cursor-pointer text-xs sm:text-sm sm:order-1"
             >
-              <PiDownloadSimpleBold className="text-lg" />
+              <PiDownloadSimpleBold className="text-lg shrink-0" />
               <span>Export CSV</span>
             </button>
           )}
-          <Link
-            href="/expenses/new?tab=scan"
-            className="bg-kuning text-karbon font-bold border-2 border-karbon rounded-md shadow-hard min-h-11 px-4 flex items-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100"
-          >
-            <PiCameraBold className="text-xl text-karbon" />
-            <span className="text-karbon">Baca Struk</span>
-          </Link>
-          <Link
-            href="/expenses/new?tab=manual"
-            className="bg-pulpen text-white font-bold border-2 border-tinta rounded-md shadow-hard min-h-11 px-4 flex items-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100"
-          >
-            <PiPlusBold className="text-xl" />
-            <span>Isi Manual</span>
-          </Link>
         </div>
       </div>
 
@@ -251,7 +259,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
         {/* Input Controls Bar */}
         <div className="flex flex-wrap gap-3 items-center pt-2 border-t border-dashed border-tinta/20">
           {/* Search Input */}
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
             <PiMagnifyingGlassBold className="absolute left-3 top-3.5 text-tinta-pudar text-lg pointer-events-none" />
             <input
               type="text"
@@ -262,11 +270,11 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
             />
           </div>
 
-          {/* Category Filter */}
+          {/* Category Filter (Full width on mobile, auto on desktop) */}
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
+            className="w-full sm:w-auto bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
           >
             <option value="">Semua Kategori</option>
             {DEFAULT_CATEGORY_LIST.map((c) => (
@@ -276,36 +284,40 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
             ))}
           </select>
 
-          {/* Date From & Date To */}
-          <div className="flex items-center gap-1.5">
+          {/* Date From & Date To (Full width on mobile, auto on desktop) */}
+          <div className="flex items-center gap-1.5 w-full sm:w-auto">
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
+              className="flex-1 sm:flex-initial min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
               title="Dari tanggal"
             />
-            <span className="text-tinta-pudar text-xs font-bold">-</span>
+            <span className="text-tinta-pudar text-xs font-bold shrink-0">-</span>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
+              className="flex-1 sm:flex-initial min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
               title="Sampai tanggal"
             />
           </div>
 
+          {/* Reset Button (Full width on mobile, auto on desktop) */}
           {(searchQuery || filterCategory || fromDate || toDate) && (
             <button
+              type="button"
               onClick={() => {
                 setSearchQuery("");
                 setFilterCategory("");
                 setFromDate("");
                 setToDate("");
               }}
-              className="text-xs font-bold text-stempel underline px-2 py-1 hover:brightness-125 cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 min-h-11 bg-stempel text-white font-bold text-xs rounded-md border-2 border-karbon shadow-hard-sm hover:brightness-110 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer shrink-0"
+              title="Reset semua filter pencarian"
             >
-              Reset
+              <PiArrowCounterClockwiseBold className="text-sm shrink-0" />
+              <span>Reset Filter</span>
             </button>
           )}
         </div>
