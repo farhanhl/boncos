@@ -92,7 +92,7 @@ export function RecentExpensesList({ expenses }: RecentExpensesListProps) {
                 </span>
               </div>
 
-              <span className="font-bold text-sm tabular-nums text-tinta shrink-0 ml-2 group-hover:text-kuning transition-colors">
+              <span className="font-bold text-sm tabular-nums text-tinta shrink-0 ml-2 whitespace-nowrap group-hover:text-kuning transition-colors">
                 {formatRupiah(e.amount)}
               </span>
             </Link>

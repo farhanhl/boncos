@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import {
   PiForkKnifeBold,
@@ -16,6 +16,11 @@ import {
   PiPlusBold,
   PiDownloadSimpleBold,
   PiArrowCounterClockwiseBold,
+  PiCalendarBlankBold,
+  PiXBold,
+  PiArrowsLeftRightBold,
+  PiCaretLeftBold,
+  PiCaretRightBold,
 } from "react-icons/pi";
 import { formatRupiah } from "@/lib/money";
 import { DEFAULT_CATEGORY_LIST, getCategoryById } from "@/lib/categories";
@@ -23,6 +28,98 @@ import type { ExpenseRecord } from "@/types/expense";
 
 interface ExpenseListProps {
   initialExpenses: ExpenseRecord[];
+}
+
+function formatToDdMmYyyy(dateStr: string): string {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    return `${d}/${m}/${y}`;
+  }
+  return dateStr;
+}
+
+function getPageNumbers(currentPage: number, totalPages: number): (number | string)[] {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const pages: (number | string)[] = [];
+  if (currentPage <= 3) {
+    pages.push(1, 2, 3, "...", totalPages);
+  } else if (currentPage >= totalPages - 2) {
+    pages.push(1, "...", totalPages - 2, totalPages - 1, totalPages);
+  } else {
+    pages.push(1, "...", currentPage, "...", totalPages);
+  }
+  return pages;
+}
+
+interface DatePickerFieldProps {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  title: string;
+}
+
+function DatePickerField({
+  value,
+  onChange,
+  placeholder = "dd/mm/yyyy",
+  title,
+}: DatePickerFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const display = value ? formatToDdMmYyyy(value) : "";
+
+  return (
+    <div
+      onClick={() => {
+        try {
+          inputRef.current?.showPicker?.();
+        } catch {
+          // ignore if showPicker is unsupported
+        }
+      }}
+      className="relative flex-1 sm:flex-initial min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-2.5 flex items-center justify-between gap-1.5 focus-within:shadow-[3px_3px_0_0_var(--pulpen)] cursor-pointer group"
+    >
+      <div className="flex items-center gap-1.5 min-w-0 overflow-hidden pointer-events-none">
+        <PiCalendarBlankBold className="text-tinta-pudar text-sm sm:text-base shrink-0 group-hover:text-tinta transition-colors" />
+        <span
+          className={`text-xs sm:text-sm truncate select-none ${
+            display ? "text-tinta font-bold" : "text-tinta-pudar font-medium"
+          }`}
+        >
+          {display || placeholder}
+        </span>
+      </div>
+
+      {value ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange("");
+          }}
+          title="Hapus tanggal"
+          aria-label="Hapus tanggal"
+          className="relative z-10 p-0.5 text-tinta-pudar hover:text-stempel transition-colors cursor-pointer shrink-0"
+        >
+          <PiXBold className="text-xs" />
+        </button>
+      ) : null}
+
+      <input
+        ref={inputRef}
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        title={title}
+        aria-label={title}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-base"
+        style={{ colorScheme: "dark" }}
+      />
+    </div>
+  );
 }
 
 function toLocalDateString(d: Date): string {
@@ -40,6 +137,16 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
+  const [pageSize, setPageSize] = useState<number>(5);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [prevFilterKey, setPrevFilterKey] = useState<string>("");
+  const listTopRef = useRef<HTMLDivElement>(null);
+
+  const currentFilterKey = `${filterCategory}|${searchQuery}|${fromDate}|${toDate}|${pageSize}`;
+  if (currentFilterKey !== prevFilterKey) {
+    setPrevFilterKey(currentFilterKey);
+    setCurrentPage(1);
+  }
 
   const handleSelectPreset = (preset: QuickDatePreset) => {
     const now = new Date();
@@ -99,6 +206,18 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
     return true;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / pageSize));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredExpenses.length);
+  const paginatedExpenses = filteredExpenses.slice(startIndex, endIndex);
+  const pageNumbers = getPageNumbers(safePage, totalPages);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    listTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const getCategoryIcon = (iconName: string) => {
     switch (iconName) {
       case "PiForkKnifeBold":
@@ -115,6 +234,8 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
         return <PiHeartbeatBold className="text-xl" />;
       case "PiGraduationCapBold":
         return <PiGraduationCapBold className="text-xl" />;
+      case "PiArrowsLeftRightBold":
+        return <PiArrowsLeftRightBold className="text-xl" />;
       default:
         return <PiDotsThreeOutlineBold className="text-xl" />;
     }
@@ -286,20 +407,18 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
 
           {/* Date From & Date To (Full width on mobile, auto on desktop) */}
           <div className="flex items-center gap-1.5 w-full sm:w-auto">
-            <input
-              type="date"
+            <DatePickerField
               value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="flex-1 sm:flex-initial min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
+              onChange={setFromDate}
               title="Dari tanggal"
+              placeholder="dd/mm/yyyy"
             />
             <span className="text-tinta-pudar text-xs font-bold shrink-0">-</span>
-            <input
-              type="date"
+            <DatePickerField
               value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="flex-1 sm:flex-initial min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
+              onChange={setToDate}
               title="Sampai tanggal"
+              placeholder="dd/mm/yyyy"
             />
           </div>
 
@@ -324,7 +443,10 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
       </div>
 
       {/* List / Empty State */}
-      <div className="bg-kertas border-2 border-tinta rounded-[10px] overflow-hidden shadow-hard">
+      <div
+        ref={listTopRef}
+        className="bg-kertas border-2 border-tinta rounded-[10px] overflow-hidden shadow-hard scroll-mt-6"
+      >
         {filteredExpenses.length === 0 ? (
           <div className="p-12 text-center">
             <p className="font-bold text-lg text-tinta mb-2">
@@ -350,51 +472,127 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
             </div>
           </div>
         ) : (
-          <div className="divide-y-2 divide-dashed divide-tinta/30">
-            {filteredExpenses.map((expense) => {
-              const cat = getCategoryById(expense.category_id);
-              return (
-                <Link
-                  key={expense.id}
-                  href={`/expenses/${expense.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-karbon/30 transition-colors group"
-                >
-                  <div className="flex items-center gap-3.5">
-                    {/* Category Icon Badge */}
-                    <div
-                      style={{ backgroundColor: cat.color }}
-                      className="w-10 h-10 rounded-full border-2 border-karbon flex items-center justify-center text-karbon shrink-0 shadow-hard-sm"
-                    >
-                      {getCategoryIcon(cat.iconName)}
-                    </div>
+          <>
+            <div className="divide-y-2 divide-dashed divide-tinta/30">
+              {paginatedExpenses.map((expense) => {
+                const cat = getCategoryById(expense.category_id);
+                return (
+                  <Link
+                    key={expense.id}
+                    href={`/expenses/${expense.id}`}
+                    className="flex items-center justify-between p-4 hover:bg-karbon/30 transition-colors group gap-3"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      {/* Category Icon Badge */}
+                      <div
+                        style={{ backgroundColor: cat.color }}
+                        className="w-10 h-10 rounded-full border-2 border-karbon flex items-center justify-center text-karbon shrink-0 shadow-hard-sm"
+                      >
+                        {getCategoryIcon(cat.iconName)}
+                      </div>
 
-                    <div>
-                      <h3 className="font-bold text-base text-tinta group-hover:text-kuning transition-colors">
-                        {expense.name}
-                      </h3>
-                      <div className="flex items-center gap-2 text-xs text-tinta-pudar mt-0.5">
-                        <span>{expense.expense_date}</span>
-                        <span>•</span>
-                        <span>{cat.name}</span>
-                        {expense.source === "scan" && (
-                          <span className="bg-kuning text-karbon font-bold px-1.5 py-0.2 rounded border border-karbon text-[10px]">
-                            SCAN
-                          </span>
-                        )}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-base text-tinta group-hover:text-kuning transition-colors truncate">
+                          {expense.name}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-tinta-pudar mt-0.5 truncate">
+                          <span className="shrink-0">{formatToDdMmYyyy(expense.expense_date)}</span>
+                          <span>•</span>
+                          <span className="truncate">{cat.name}</span>
+                          {expense.source === "scan" && (
+                            <span className="bg-kuning text-karbon font-bold px-1.5 py-0.2 rounded border border-karbon text-[10px] shrink-0">
+                              SCAN
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Nominal (tabular-nums, bold, right-aligned, shrink-0, whitespace-nowrap) */}
+                    <div className="text-right shrink-0 whitespace-nowrap pl-2">
+                      <span className="font-bold text-base md:text-lg tabular-nums text-tinta group-hover:text-kuning transition-colors whitespace-nowrap">
+                        {formatRupiah(expense.amount)}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Pagination Controls */}
+            {filteredExpenses.length > 0 && (
+              <div className="border-t-2 border-dashed border-tinta/30 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-kertas/60">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 text-xs text-tinta-pudar font-medium">
+                  <span>
+                    Menampilkan <span className="font-bold text-tinta">{startIndex + 1}</span>-
+                    <span className="font-bold text-tinta">{endIndex}</span> dari{" "}
+                    <span className="font-bold text-tinta">{filteredExpenses.length}</span> pengeluaran
+                  </span>
+                  <div className="flex items-center gap-1.5 pl-2 sm:border-l sm:border-tinta/30">
+                    <span className="hidden sm:inline">Per hal:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      className="bg-kertas border-2 border-tinta rounded text-xs font-bold text-tinta py-0.5 px-2 focus:ring-0 focus:shadow-[2px_2px_0_0_var(--pulpen)] cursor-pointer"
+                      title="Jumlah baris per halaman"
+                    >
+                      <option value={5}>5 / hal</option>
+                      <option value={10}>10 / hal</option>
+                      <option value={20}>20 / hal</option>
+                      <option value={50}>50 / hal</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(safePage - 1)}
+                    disabled={safePage === 1}
+                    className="min-h-9 px-3 flex items-center gap-1 bg-kertas text-tinta font-bold text-xs border-2 border-tinta rounded-md shadow-hard-sm hover:brightness-110 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-x-0 disabled:translate-y-0 transition-all cursor-pointer"
+                    title="Halaman sebelumnya"
+                  >
+                    <PiCaretLeftBold className="text-sm" />
+                    <span className="hidden sm:inline">Sebelumnya</span>
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {pageNumbers.map((p, idx) =>
+                      typeof p === "number" ? (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => handlePageChange(p)}
+                          className={`w-9 h-9 flex items-center justify-center text-xs font-bold rounded-md border-2 transition-all cursor-pointer ${
+                            p === safePage
+                              ? "bg-kuning text-karbon border-karbon shadow-hard-sm font-extrabold"
+                              : "bg-kertas text-tinta border-tinta hover:bg-karbon/40"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ) : (
+                        <span key={`dots-${idx}`} className="px-1 text-tinta-pudar text-xs select-none">
+                          •••
+                        </span>
+                      )
+                    )}
                   </div>
 
-                  {/* Nominal (tabular-nums, bold, right-aligned) */}
-                  <div className="text-right">
-                    <span className="font-bold text-base md:text-lg tabular-nums text-tinta group-hover:text-kuning transition-colors">
-                      {formatRupiah(expense.amount)}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(safePage + 1)}
+                    disabled={safePage === totalPages}
+                    className="min-h-9 px-3 flex items-center gap-1 bg-kertas text-tinta font-bold text-xs border-2 border-tinta rounded-md shadow-hard-sm hover:brightness-110 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-x-0 disabled:translate-y-0 transition-all cursor-pointer"
+                    title="Halaman selanjutnya"
+                  >
+                    <span className="hidden sm:inline">Selanjutnya</span>
+                    <PiCaretRightBold className="text-sm" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

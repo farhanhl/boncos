@@ -9,7 +9,6 @@ import {
   PiTagBold,
   PiGearBold,
   PiSignOutBold,
-  PiFileCodeBold,
 } from "react-icons/pi";
 import { signOut } from "firebase/auth";
 import { getClientAuth } from "@/lib/firebase/client";
@@ -67,20 +66,18 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
       <Link
         key={item.href}
         href={item.href}
-        className={`flex flex-col items-center justify-center py-1 px-3 min-w-[56px] transition-colors ${
-          isActive
+        className={`flex flex-col items-center justify-center py-1 px-3 min-w-[56px] transition-colors ${isActive
             ? "text-tinta font-bold"
             : "text-tinta-pudar hover:text-tinta font-medium"
-        }`}
+          }`}
       >
         <Icon className={`text-2xl transition-transform ${isActive ? "scale-105" : ""}`} />
         <span className="text-[11px] leading-tight mt-0.5">
           {item.label}
         </span>
         <span
-          className={`w-5 h-[3px] rounded-full mt-1 transition-all duration-150 ${
-            isActive ? "bg-kuning scale-x-100 opacity-100" : "bg-transparent scale-x-0 opacity-0"
-          }`}
+          className={`w-5 h-[3px] rounded-full mt-1 transition-all duration-150 ${isActive ? "bg-kuning scale-x-100 opacity-100" : "bg-transparent scale-x-0 opacity-0"
+            }`}
           aria-hidden="true"
         />
       </Link>
@@ -120,11 +117,10 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-md text-sm font-bold border-2 transition-colors ${
-                  isActive
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-md text-sm font-bold border-2 transition-colors ${isActive
                     ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
                     : "border-transparent text-tinta hover:bg-karbon/50"
-                }`}
+                  }`}
               >
                 <Icon className={`text-xl ${isActive ? "text-karbon" : "text-tinta"}`} />
                 <span className={isActive ? "text-karbon" : "text-tinta"}>{item.label}</span>
@@ -132,17 +128,6 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
             );
           })}
         </nav>
-
-        {/* Developer Swagger Docs link */}
-        <div className="pt-2 mb-2">
-          <Link
-            href="/docs"
-            className="flex items-center gap-2 text-xs font-bold text-tinta-pudar hover:text-tinta px-3 py-2 rounded-md hover:bg-karbon/40 transition-colors"
-          >
-            <PiFileCodeBold className="text-base" />
-            <span>Swagger API Docs</span>
-          </Link>
-        </div>
 
         {/* User profile & Logout */}
         <div className="pt-4 border-t-2 border-dashed border-tinta/30 flex items-center justify-between">
