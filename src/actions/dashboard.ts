@@ -22,6 +22,7 @@ export interface DashboardSummaryData {
   topExpenses: ExpenseRecord[];
   recentExpenses: ExpenseRecord[];
   categoryBreakdown: CategorySummaryItem[];
+  monthlyBudget: number;
 }
 
 export async function getDashboardSummary(
@@ -145,6 +146,16 @@ export async function getDashboardSummary(
       })
       .sort((a, b) => b.total - a.total);
 
+    let monthlyBudget = 0;
+    try {
+      const budgetDoc = await userCol(user.uid, "settings").doc("budget").get();
+      if (budgetDoc.exists) {
+        monthlyBudget = budgetDoc.data()?.monthly_budget || 0;
+      }
+    } catch {
+      monthlyBudget = 0;
+    }
+
     const diff = currentMonthTotal - lastMonthTotal;
     const diffType = diff > 0 ? "boncos" : diff < 0 ? "hemat" : "same";
 
@@ -159,10 +170,39 @@ export async function getDashboardSummary(
         topExpenses,
         recentExpenses,
         categoryBreakdown,
+        monthlyBudget,
       },
     };
   } catch (err) {
     console.error("[getDashboardSummary Error]:", err);
     return { ok: false, message: "Gagal memuat ringkasan dashboard." };
+  }
+}
+
+export async function saveMonthlyBudget(
+  amount: number
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { ok: false, message: "Silakan masuk terlebih dahulu." };
+    }
+
+    if (!Number.isSafeInteger(amount) || amount < 0) {
+      return { ok: false, message: "Nominal anggaran harus berupa angka bulat positif." };
+    }
+
+    await userCol(user.uid, "settings").doc("budget").set(
+      {
+        monthly_budget: amount,
+        updated_at: new Date(),
+      },
+      { merge: true }
+    );
+
+    return { ok: true, message: "Target anggaran berhasil disimpan." };
+  } catch (err) {
+    console.error("[saveMonthlyBudget Error]:", err);
+    return { ok: false, message: "Gagal menyimpan target anggaran." };
   }
 }

@@ -232,7 +232,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
                     </div>
 
                     <div>
-                      <h3 className="font-bold text-base text-tinta group-hover:text-pulpen transition-colors">
+                      <h3 className="font-bold text-base text-tinta group-hover:text-kuning transition-colors">
                         {expense.name}
                       </h3>
                       <div className="flex items-center gap-2 text-xs text-tinta-pudar mt-0.5">
@@ -250,7 +250,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
 
                   {/* Nominal (tabular-nums, bold, right-aligned) */}
                   <div className="text-right">
-                    <span className="font-bold text-base md:text-lg tabular-nums text-tinta">
+                    <span className="font-bold text-base md:text-lg tabular-nums text-tinta group-hover:text-kuning transition-colors">
                       {formatRupiah(expense.amount)}
                     </span>
                   </div>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bagel_Fat_One, Plus_Jakarta_Sans } from "next/font/google";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import "./globals.css";
 
 const bagelFatOne = Bagel_Fat_One({
@@ -55,6 +56,16 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: "/",
+  },
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Boncos",
   },
   openGraph: {
     type: "website",
@@ -169,7 +180,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }

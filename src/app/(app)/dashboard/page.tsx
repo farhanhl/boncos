@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PiCameraBold, PiPlusBold } from "react-icons/pi";
 import { getDashboardSummary } from "@/actions/dashboard";
 import { HeroNota } from "@/components/dashboard/HeroNota";
+import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard";
 import { CategoryBreakdownChart } from "@/components/dashboard/CategoryBreakdownChart";
 import { RecentExpensesList } from "@/components/dashboard/RecentExpensesList";
 import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
@@ -78,8 +79,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           />
         </div>
 
-        {/* Kolom Kanan: Kategori + Terakhir (lg:col-span-7) */}
+        {/* Kolom Kanan: Target Budget + Kategori + Terakhir (lg:col-span-7) */}
         <div className="lg:col-span-7 space-y-6">
+          <BudgetProgressCard
+            currentTotal={currentTotal}
+            initialBudget={data?.monthlyBudget || 0}
+          />
           <CategoryBreakdownChart
             items={categoryBreakdown}
             total={currentTotal}

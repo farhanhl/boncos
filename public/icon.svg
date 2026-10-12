@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="100" fill="#010736"/>
+  <rect x="24" y="24" width="464" height="464" rx="80" fill="none" stroke="#FCF1D0" stroke-width="16"/>
+  
+  <!-- Shadow offset -->
+  <rect x="126" y="116" width="280" height="280" rx="40" fill="#00031A"/>
+  
+  <!-- Yellow Ticket Card -->
+  <rect x="110" y="100" width="280" height="280" rx="40" fill="#FFD23F" stroke="#00031A" stroke-width="14"/>
+  
+  <!-- Big B Letter -->
+  <text x="250" y="295" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="200" font-weight="900" text-anchor="middle" fill="#010736">B</text>
+  
+  <!-- Mini Receipt Tag Accent -->
+  <path d="M150 100 L170 120 L190 100 L210 120 L230 100 L250 120 L270 100 L290 120 L310 100 L330 120 L350 100" stroke="#00031A" stroke-width="8" fill="none"/>
+</svg>
