@@ -344,7 +344,7 @@ ao Bagikan Resi
       const parsed = parseReceiptText(rawMandiri);
       expect(parsed.doc_type).toBe("ewallet");
       expect(parsed.amount.value).toBe(3221);
-      expect(parsed.name.value).toBe("King Digi");
+      expect(parsed.name.value).toBe("Transfer ke King Digi");
       expect(parsed.name.value).not.toBe("Pembayaran Berhasil!");
       expect(parsed.name.value).not.toBe("Lihat Resi");
       expect(parsed.extraction_confidence).toBeGreaterThanOrEqual(0.5);
@@ -365,7 +365,7 @@ Rp 3.221
       const parsed = parseReceiptText(rawMandiriWithDate);
       expect(parsed.doc_type).toBe("ewallet");
       expect(parsed.amount.value).toBe(3221);
-      expect(parsed.name.value).toBe("King Digi");
+      expect(parsed.name.value).toBe("Transfer ke King Digi");
       expect(parsed.expense_date.value).toBe("2026-10-09");
       expect(parsed.status).toBe("ok");
     });
@@ -400,7 +400,7 @@ ka cela
       expect(parsed.amount.value).toBe(10000);
       expect(parsed.amount.value).not.toBe(150); // Total Rewards ignored
       expect(parsed.amount.value).not.toBe(50); // Cashback ignored
-      expect(parsed.name.value).toBe("Pelataran Parkiran Mangku");
+      expect(parsed.name.value).toBe("Transfer ke Pelataran Parkiran Mangku");
       expect(parsed.name.value).not.toBe("X Dr");
       expect(parsed.expense_date.value).toBe("2026-10-09");
       expect(parsed.category_suggestion.value).toBe("transport");

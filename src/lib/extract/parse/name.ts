@@ -153,10 +153,17 @@ export function extractName(
           if (nameCandidate && nameCandidate.length >= 2) {
             let finalName = toTitleCase(nameCandidate);
             const lowerFinal = finalName.toLowerCase();
+            const hasResiOrTransfer = lines.some((l) =>
+              /\b(RESI|BUKTI|TRANSFER)\b/i.test(l.normalized)
+            );
             if (label === "DITRANSFER KE" && !lowerFinal.startsWith("ditransfer ke")) {
               finalName = `Ditransfer ke ${finalName}`;
             } else if (
-              docType === "bank_transfer" &&
+              (docType === "bank_transfer" ||
+                hasResiOrTransfer ||
+                label === "TO" ||
+                label === "TRANSFER TO" ||
+                label === "PENERIMA") &&
               !lowerFinal.startsWith("transfer ke") &&
               !lowerFinal.startsWith("ditransfer ke")
             ) {
@@ -212,8 +219,21 @@ export function extractName(
     // Strip order-type suffixes like "Dine-In ft TA6"
     norm = norm.replace(/\s+(?:Dine-In|Take Away|Takeaway|ft\s+\w+).*$/i, "").trim();
 
+    let finalName = toTitleCase(norm).slice(0, 60);
+    const hasResiOrTransfer = lines.some((l) =>
+      /\b(RESI|BUKTI|TRANSFER)\b/i.test(l.normalized)
+    );
+    if (
+      docType !== "receipt" &&
+      (docType === "bank_transfer" || hasResiOrTransfer) &&
+      !finalName.toLowerCase().startsWith("transfer ke") &&
+      !finalName.toLowerCase().startsWith("ditransfer ke")
+    ) {
+      finalName = `Transfer ke ${finalName}`;
+    }
+
     return {
-      value: toTitleCase(norm).slice(0, 60),
+      value: finalName,
       confidence: isKnown ? 0.85 : 0.7,
       rule: isKnown ? "receipt_header_known_merchant" : "receipt_header_line",
     };
