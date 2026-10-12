@@ -4,7 +4,7 @@ import { ExpenseList } from "@/components/expenses/ExpenseList";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Daftar Jajan — Boncos",
+  title: "Daftar Pengeluaran — Boncos",
 };
 
 export default async function ExpensesPage() {

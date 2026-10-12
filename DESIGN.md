@@ -9,7 +9,7 @@ Aplikasi ini mencatat jajan, parkir, dan token listrik, jadi dunianya adalah not
 
 Audiens: anak muda yang mencatat uang dari HP, sering sambil antre atau nongkrong. Tugas utama: **foto struk → angka kebaca → simpan, kurang dari 10 detik.**
 
-**Satu hal yang harus diingat orang:** kartu **"Nota bulan ini"** di dashboard (nota sungguhan dengan tepi bergerigi, daftar jajan, dan total besar) plus **cap "TERSIMPAN"** yang menghantam layar saat menyimpan. Di luar dua momen itu, UI dibuat tenang dan disiplin: flat, berbingkai tinta, tanpa dekorasi tambahan.
+**Satu hal yang harus diingat orang:** kartu **"Nota bulan ini"** di dashboard (nota sungguhan dengan tepi bergerigi, daftar pengeluaran, dan total besar) plus **cap "TERSIMPAN"** yang menghantam layar saat menyimpan. Di luar dua momen itu, UI dibuat tenang dan disiplin: flat, berbingkai tinta, tanpa dekorasi tambahan.
 
 ### Kenapa palet ini (bukan krem + terakota, bukan hitam + hijau neon)
 Warnanya diambil dari benda nyata: tinta pulpen nota (biru), kertas karbon (biru muda), stempel LUNAS (merah), stabilo (kuning). Teks dan garis memakai **biru tinta tua**, bukan hitam, supaya terasa seperti ditulis tangan di nota.
