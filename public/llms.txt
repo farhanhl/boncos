@@ -1,0 +1,23 @@
+# Boncos — Catat Pengeluaran Otomatis via Scan Struk & E-Wallet
+
+> Boncos adalah aplikasi web modern pencatat keuangan pribadi dengan fitur pemindaian struk belanja fisik, nota, dan screenshot transfer/e-wallet (m-banking BCA, Mandiri, ShopeePay, GoPay, SeaBank, dsb.) secara otomatis langsung di browser pengguna tanpa AI dan tanpa pernah mengunggah gambar ke server.
+
+## Gambaran Umum & Filosofi
+- **100% Client-Side Privacy**: Gambar diproses lokal di browser menggunakan Tesseract.js (WASM). Foto atau gambar tidak pernah diunggah ke cloud/server atau disimpan di database mana pun.
+- **Rule-Based Deterministic Extraction**: Ekstraksi nama merchant, nominal belanja (selalu integer rupiah), tanggal, dan kategori menggunakan parsing aturan yang deterministik dan transparan tanpa model AI/LLM.
+- **User Review Step**: Setiap hasil ekstraksi diverifikasi oleh pengguna sebelum disimpan ke database, menjamin akurasi 100% data keuangan.
+- **Integrasi Telegram Bot Opsional**: Notifikasi instan ke channel/grup Telegram pribadi terenkripsi setiap kali ada pengeluaran baru.
+- **Laporan & Ekspor Data**: Dashboard keuangan dengan grafik pengeluaran bulanan, breakdown per kategori, riwayat transaksi lengkap, dan ekspor CSV.
+- **OpenAPI Ready**: Dilengkapi dengan dokumentasi Swagger UI interaktif dan kontrak OpenAPI 3.0.
+
+## Tautan & Referensi Cepat
+- [Dokumentasi Lengkap LLM](/llms-full.txt): Spesifikasi arsitektur, fitur teknis, dan panduan lengkap.
+- [Spesifikasi API OpenAPI](/docs): Swagger UI interaktif untuk endpoint dan kontrak API.
+- [Spesifikasi JSON OpenAPI](/api/openapi): Definisi skema OpenAPI 3.0 dalam format JSON.
+- [Halaman Masuk](/login): Akses aplikasi Boncos.
+- [Halaman Registrasi](/register): Pendaftaran akun baru Boncos.
+
+## Dokumen Pendukung & Arsitektur
+- Core Tech Stack: Next.js (App Router), React, Tailwind CSS, Flowbite React, Firebase Auth & Firestore Admin SDK, Tesseract.js.
+- Standar Mata Uang: Rupiah Indonesia (IDR) dalam format integer murni (tanpa desimal/float).
+- Keamanan: Session cookie HTTP-only terverifikasi Firebase Admin SDK, enkripsi AES-256-GCM untuk bot token Telegram.

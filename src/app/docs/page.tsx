@@ -4,8 +4,18 @@ import { PiArrowLeftBold, PiFileCodeBold } from "react-icons/pi";
 import { SwaggerViewer } from "@/components/docs/SwaggerViewer";
 
 export const metadata: Metadata = {
-  title: "API Documentation (Swagger) — Boncos",
-  description: "Dokumentasi interaktif OpenAPI & Swagger UI untuk Boncos API & Server Actions.",
+  title: "API Documentation (Swagger & OpenAPI 3.0)",
+  description:
+    "Dokumentasi resmi dan interaktif OpenAPI 3.0 & Swagger UI untuk integrasi Boncos API, endpoint pengeluaran, dan autentikasi sesi.",
+  alternates: {
+    canonical: "/docs",
+  },
+  openGraph: {
+    title: "Dokumentasi API Boncos — OpenAPI 3.0 & Swagger UI",
+    description:
+      "Pelajari spesifikasi endpoint API Boncos untuk integrasi data keuangan, scan OCR, dan notifikasi Telegram.",
+    url: "/docs",
+  },
 };
 
 export default function DocsPage() {

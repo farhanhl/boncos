@@ -1,0 +1,80 @@
+# Dokumentasi Lengkap Boncos (Aplikasi Pencatatan Keuangan Otomatis)
+
+## 1. Profil Produk
+Boncos (https://boncos.app) adalah aplikasi web pencatatan keuangan pribadi berbahasa Indonesia yang dirancang untuk kecepatan input, akurasi tinggi, dan privasi mutlak. 
+Slogan: "Catat Pengeluaran Tanpa Ribet".
+
+### Masalah yang Diselesaikan
+Mencatat keuangan manual seringkali melelahkan dan sering terlewat. Aplikasi pencatat keuangan konvensional seringkali:
+1. Memaksa input nominal, tanggal, dan nama toko secara manual satu per satu.
+2. Menggunakan layanan AI cloud berbayar atau pihak ketiga yang mengunggah foto struk/screenshot pengguna ke server cloud, menimbulkan risiko kebocoran privasi data transaksi keuangan.
+3. Kerap salah membaca format angka Indonesia (misalnya `Rp 25.000` atau `25rb`).
+
+### Pendekatan Boncos
+Boncos menyelesaikan masalah ini dengan:
+- Pemrosesan gambar 100% di browser pengguna menggunakan Tesseract.js (WASM).
+- Parser berbasis aturan lokal (deterministic regex & heuristics) tanpa ketergantungan pada model LLM/AI di server.
+- Gambar struk dan teks mentah OCR tidak pernah disimpan atau diunggah ke server backend mana pun.
+- Selalu ada langkah review user yang memvalidasi hasil pembacaan sebelum disimpan ke database Firestore.
+
+---
+
+## 2. Fitur-Fitur Utama
+
+### A. Ekstraksi Struk & E-Wallet Otomatis (Browser OCR)
+- **Sumber Dokumen**:
+  - Struk fisik kasir toko ritel & restoran: Indomaret, Alfamart, Alfamidi, Superindo, Kopi Nako, SPBU Pertamina, Shell, Solaria, KFC, dsb.
+  - Bukti transfer bank & m-banking: BCA Mobile, myBCA, Livin' by Mandiri, SeaBank, dsb.
+  - Bukti transaksi e-wallet & QRIS: ShopeePay, GoPay, OVO, DANA, LinkAja.
+  - Tagihan & voucher: Token listrik PLN, tagihan air, voucher belanja.
+- **Elemen yang Diekstrak**:
+  - `name`: Nama merchant/toko atau tujuan transfer (misal: "Transfer ke Pelataran Parkiran Mangku", "Kopi Nako Kota Bintang", "Indomaret Point").
+  - `amount`: Nominal total transaksi dalam integer rupiah bersih (misal: `10000`, `102300`). Diskon dan subtotal dipisahkan dengan cermat.
+  - `expense_date`: Tanggal transaksi (format ISO YYYY-MM-DD), memahami format tanggal Indonesia (misal: "09 Okt 2026", "13/09/2026").
+  - `category_suggestion`: Kategori yang disarankan secara otomatis (`food`, `transport`, `bills`, `shopping`, `entertainment`, `health`, `transfer`, `other`).
+- **Skor Keyakinan (Confidence Score)**:
+  - Setiap field memiliki nilai confidence 0.0 - 1.0. Jika confidence di bawah threshold (< 0.7), sistem menandai dengan badge "Cek lagi" agar pengguna meninjaunya kembali.
+
+### B. Notifikasi Telegram Bot Otomatis
+- Pengguna dapat menghubungkan Bot Telegram milik mereka sendiri.
+- Token bot dienkripsi menggunakan AES-256-GCM sebelum disimpan di database dan tidak pernah ditampilkan kembali secara utuh.
+- Setiap pengeluaran baru yang disimpan (baik lewat scan struk maupun manual) otomatis dikirimkan ke channel atau chat Telegram pengguna dalam format pesan rapi.
+
+### C. Dashboard Analitik & Riwayat Transaksi
+- Ringkasan total pengeluaran bulan berjalan dan perbandingan persentase dengan bulan sebelumnya.
+- Grafik komposisi pengeluaran per kategori.
+- Tabel riwayat transaksi dengan filter rentang tanggal, kategori, dan pencarian nama.
+- Tombol ekspor data ke format CSV untuk analisis lebih lanjut di Excel/Google Sheets.
+
+### D. Keamanan & Isolasi Data Pengguna
+- Autentikasi berbasis Firebase Auth di frontend dengan Session Cookie HTTP-only yang divalidasi ketat oleh Firebase Admin SDK di server.
+- Arsitektur user-isolation: Seluruh data transaksi di Firestore terisolasi di bawah path user masing-masing (`users/{uid}/expenses/...`).
+- Rule-based access control memastikan tidak ada data pengguna yang dapat diakses oleh pengguna lain.
+
+### E. OpenAPI 3.0 & Swagger UI
+- Tersedia dokumentasi API interaktif publik di `/docs` berbasis Swagger UI.
+- Skema OpenAPI 3.0 lengkap di `/api/openapi`.
+
+---
+
+## 3. Pertanyaan yang Sering Diajukan (FAQ)
+
+### Q: Apakah Boncos menyimpan foto struk atau screenshot saya?
+A: Sama sekali tidak. Pemrosesan OCR berlangsung sepenuhnya di memori browser lokal perangkat Anda (client-side Tesseract.js WASM). Tidak ada byte gambar yang dikirim ke server Boncos, Firebase Storage, maupun pihak ketiga.
+
+### Q: Apakah Boncos menggunakan teknologi AI/LLM untuk membaca struk?
+A: Tidak. Boncos sengaja tidak menggunakan AI/LLM cloud untuk pemrosesan struk. Boncos menggunakan OCR berbasis Tesseract.js yang dipadukan dengan aturan parsing deterministik murni. Hal ini membuat proses ekstraksi sangat cepat, gratis dari biaya token AI, bebas halusinasi, dan 100% menjaga privasi.
+
+### Q: Bagaimana jika hasil pembacaan salah atau struk buram?
+A: Boncos menyediakan form review sebelum data disimpan. Pengguna dapat mengedit nama, nominal, tanggal, maupun kategori secara langsung jika ada koreksi.
+
+### Q: Apakah data nominal uang akurat dan tidak ada kesalahan pembulatan desimal?
+A: Ya. Seluruh nominal di Boncos diperlakukan sebagai integer rupiah (IDR). Sistem tidak menggunakan floating point untuk nominal uang, mencegah isu presisi desimal.
+
+---
+
+## 4. Informasi Pengembang & Kontak
+- Nama Proyek: Boncos
+- Lisensi: Private / Proprietary
+- Repositori: https://github.com/farhanhl/boncos
+- Domain Utama: https://boncos.app
