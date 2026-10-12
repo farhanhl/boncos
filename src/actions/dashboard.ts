@@ -94,10 +94,10 @@ export async function getDashboardSummary(
       });
     });
 
-    // Top 4 expenses for hero nota (sorted by amount descending in memory)
+    // Top 5 expenses for hero nota (sorted by amount descending in memory)
     const topExpenses = [...thisMonthExpenses]
       .sort((a, b) => b.amount - a.amount)
-      .slice(0, 4);
+      .slice(0, 5);
 
     // Recent 5 expenses (try fetching recent, or fallback to in-memory)
     let recentExpenses: ExpenseRecord[] = [];

@@ -47,7 +47,7 @@ export function HeroNota({
           {periodTitle}
         </h2>
         <span className="text-xs font-bold text-tinta-dark/70 uppercase tracking-wider shrink-0">
-          Pengeluaran Terbesar
+          5 Pengeluaran Terbesar
         </span>
       </div>
 
