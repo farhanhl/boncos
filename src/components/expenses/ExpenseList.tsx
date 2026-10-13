@@ -85,9 +85,8 @@ function DatePickerField({
       <div className="flex items-center gap-1.5 min-w-0 overflow-hidden pointer-events-none">
         <PiCalendarBlankBold className="text-tinta-pudar text-sm sm:text-base shrink-0 group-hover:text-tinta transition-colors" />
         <span
-          className={`text-xs sm:text-sm truncate select-none ${
-            display ? "text-tinta font-bold" : "text-tinta-pudar font-medium"
-          }`}
+          className={`text-xs sm:text-sm truncate select-none ${display ? "text-tinta font-bold" : "text-tinta-pudar font-medium"
+            }`}
         >
           {display || placeholder}
         </span>
@@ -137,7 +136,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
-  const [pageSize, setPageSize] = useState<number>(5);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [prevFilterKey, setPrevFilterKey] = useState<string>("");
   const listTopRef = useRef<HTMLDivElement>(null);
@@ -282,9 +281,8 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
           {/* Tombol Utama: Baca Struk (Full width di baris atas mobile) */}
           <Link
             href="/expenses/new?tab=scan"
-            className={`${
-              filteredExpenses.length > 0 ? "col-span-2" : "col-span-1"
-            } sm:col-auto bg-kuning text-karbon font-bold border-2 border-karbon rounded-md shadow-hard min-h-11 px-4 flex items-center justify-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100 sm:order-2`}
+            className={`${filteredExpenses.length > 0 ? "col-span-2" : "col-span-1"
+              } sm:col-auto bg-kuning text-karbon font-bold border-2 border-karbon rounded-md shadow-hard min-h-11 px-4 flex items-center justify-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100 sm:order-2`}
           >
             <PiCameraBold className="text-xl text-karbon shrink-0" />
             <span className="text-karbon">Baca Struk</span>
@@ -323,55 +321,50 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
           <button
             type="button"
             onClick={() => handleSelectPreset("all")}
-            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              activePreset === "all"
+            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "all"
                 ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
                 : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
-            }`}
+              }`}
           >
             Semua
           </button>
           <button
             type="button"
             onClick={() => handleSelectPreset("today")}
-            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              activePreset === "today"
+            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "today"
                 ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
                 : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
-            }`}
+              }`}
           >
             Hari Ini
           </button>
           <button
             type="button"
             onClick={() => handleSelectPreset("week")}
-            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              activePreset === "week"
+            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "week"
                 ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
                 : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
-            }`}
+              }`}
           >
             7 Hari Terakhir
           </button>
           <button
             type="button"
             onClick={() => handleSelectPreset("month")}
-            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              activePreset === "month"
+            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "month"
                 ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
                 : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
-            }`}
+              }`}
           >
             Bulan Ini
           </button>
           <button
             type="button"
             onClick={() => handleSelectPreset("last_month")}
-            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              activePreset === "last_month"
+            className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "last_month"
                 ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
                 : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
-            }`}
+              }`}
           >
             Bulan Lalu
           </button>
@@ -536,7 +529,6 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
                       className="bg-kertas border-2 border-tinta rounded text-xs font-bold text-tinta py-0.5 px-2 focus:ring-0 focus:shadow-[2px_2px_0_0_var(--pulpen)] cursor-pointer"
                       title="Jumlah baris per halaman"
                     >
-                      <option value={5}>5 / hal</option>
                       <option value={10}>10 / hal</option>
                       <option value={20}>20 / hal</option>
                       <option value={50}>50 / hal</option>
@@ -563,11 +555,10 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
                           key={p}
                           type="button"
                           onClick={() => handlePageChange(p)}
-                          className={`w-9 h-9 flex items-center justify-center text-xs font-bold rounded-md border-2 transition-all cursor-pointer ${
-                            p === safePage
+                          className={`w-9 h-9 flex items-center justify-center text-xs font-bold rounded-md border-2 transition-all cursor-pointer ${p === safePage
                               ? "bg-kuning text-karbon border-karbon shadow-hard-sm font-extrabold"
                               : "bg-kertas text-tinta border-tinta hover:bg-karbon/40"
-                          }`}
+                            }`}
                         >
                           {p}
                         </button>
