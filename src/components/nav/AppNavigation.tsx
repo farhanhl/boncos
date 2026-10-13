@@ -67,8 +67,8 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
         key={item.href}
         href={item.href}
         className={`flex flex-col items-center justify-center py-1 px-3 min-w-[56px] transition-colors ${isActive
-            ? "text-tinta font-bold"
-            : "text-tinta-pudar hover:text-tinta font-medium"
+          ? "text-tinta font-bold"
+          : "text-tinta-pudar hover:text-tinta font-medium"
           }`}
       >
         <Icon className={`text-2xl transition-transform ${isActive ? "scale-105" : ""}`} />
@@ -118,8 +118,8 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-md text-sm font-bold border-2 transition-colors ${isActive
-                    ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
-                    : "border-transparent text-tinta hover:bg-karbon/50"
+                  ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
+                  : "border-transparent text-tinta hover:bg-karbon/50"
                   }`}
               >
                 <Icon className={`text-xl ${isActive ? "text-karbon" : "text-tinta"}`} />

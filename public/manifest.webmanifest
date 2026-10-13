@@ -11,9 +11,9 @@
   "categories": ["finance", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "/logo.webp",
       "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "type": "image/webp",
       "purpose": "any maskable"
     }
   ],
@@ -23,14 +23,14 @@
       "short_name": "Scan",
       "description": "Scan struk belanja fisik atau bukti transfer",
       "url": "/expenses/new?tab=scan",
-      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo.webp", "sizes": "192x192" }]
     },
     {
       "name": "Isi Manual",
       "short_name": "Manual",
       "description": "Input transaksi pengeluaran secara manual",
       "url": "/expenses/new?tab=manual",
-      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo.webp", "sizes": "192x192" }]
     }
   ]
 }

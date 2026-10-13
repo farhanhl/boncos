@@ -118,9 +118,9 @@ export function AuthForm({ mode }: AuthFormProps) {
       if (!res.ok || !data.ok) {
         throw new Error(
           data.message ||
-            (rawText
-              ? `Server Error (${res.status}): ${rawText.slice(0, 150)}`
-              : `Gagal membuat sesi login (Status ${res.status}).`)
+          (rawText
+            ? `Server Error (${res.status}): ${rawText.slice(0, 150)}`
+            : `Gagal membuat sesi login (Status ${res.status}).`)
         );
       }
 
