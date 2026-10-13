@@ -257,9 +257,6 @@ export function AuthForm({ mode }: AuthFormProps) {
               />
               <span className="text-xs font-bold text-tinta">Ingat saya</span>
             </label>
-            <span className="text-[11px] text-tinta-pudar">
-              {rememberMe ? "Sesi hingga 14 hari" : "Sesi 1 hari"}
-            </span>
           </div>
         )}
 
