@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { DEFAULT_CATEGORY_LIST } from "@/lib/categories";
 import { parseRupiahInput } from "@/lib/money";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { createExpense } from "@/actions/expenses";
 import type { ExtractionResult } from "@/lib/extract/types";
 
@@ -253,13 +254,12 @@ export function ReviewForm({
                 </span>
               )}
             </div>
-            <input
+            <DatePickerField
               id="review-date"
-              type="date"
               required
               value={expenseDate}
-              onChange={(e) => setExpenseDate(e.target.value)}
-              className="bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] w-full text-base"
+              onChange={(val) => setExpenseDate(val)}
+              title="Pilih tanggal"
             />
           </div>
 

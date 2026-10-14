@@ -4,6 +4,7 @@ import dns from "node:dns";
 import { userCol } from "./firebase/admin";
 import { decryptText } from "./crypto";
 import { formatRupiah } from "./money";
+import { formatDate } from "./date";
 import { getCategoryById } from "./categories";
 
 export interface ExpenseNotificationData {
@@ -201,7 +202,7 @@ export async function sendTelegramNotificationForExpense(
       "💸 <b>Pengeluaran baru</b>",
       `Nama: ${escapeHtml(data.name)}`,
       `Nominal: ${escapeHtml(formatRupiah(data.amount))}`,
-      `Tanggal: ${escapeHtml(data.expense_date)}`,
+      `Tanggal: ${escapeHtml(formatDate(data.expense_date))}`,
       `Kategori: ${escapeHtml(categoryInfo.name)}`,
       `Sumber: ${sourceLabel}`,
     ].join("\n");
@@ -251,7 +252,7 @@ export async function sendTelegramScanResult(
         "🧾 <b>Pencatatan Struk Berhasil!</b>",
         `Nama: <b>${escapeHtml(options.expense.name)}</b>`,
         `Nominal: <b>${escapeHtml(formatRupiah(options.expense.amount))}</b>`,
-        `Tanggal: ${escapeHtml(options.expense.expense_date)}`,
+        `Tanggal: ${escapeHtml(formatDate(options.expense.expense_date))}`,
         `Kategori: ${escapeHtml(categoryInfo.name)}`,
         `Metode: <i>Webhook Scan Otomatis</i>`,
       ].join("\n");

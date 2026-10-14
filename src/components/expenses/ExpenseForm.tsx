@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DEFAULT_CATEGORY_LIST } from "@/lib/categories";
 import { formatRupiah, parseRupiahInput } from "@/lib/money";
+import { formatDate } from "@/lib/date";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { createExpense, updateExpense, deleteExpense } from "@/actions/expenses";
 import type { ExpenseRecord } from "@/types/expense";
 
@@ -120,7 +122,7 @@ export function ExpenseForm({
     const confirmDelete = window.confirm(
       `Hapus pengeluaran ini?\n${initialData.name}, ${formatRupiah(
         initialData.amount
-      )}, ${initialData.expense_date} akan hilang dan tidak bisa dikembalikan.`
+      )}, ${formatDate(initialData.expense_date)} akan hilang dan tidak bisa dikembalikan.`
     );
     if (!confirmDelete) return;
 
@@ -212,13 +214,12 @@ export function ExpenseForm({
           >
             Tanggal
           </label>
-          <input
+          <DatePickerField
             id="expense-date"
-            type="date"
             required
             value={expenseDate}
-            onChange={(e) => setExpenseDate(e.target.value)}
-            className="bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] w-full text-base"
+            onChange={(val) => setExpenseDate(val)}
+            title="Pilih tanggal pengeluaran"
           />
         </div>
 

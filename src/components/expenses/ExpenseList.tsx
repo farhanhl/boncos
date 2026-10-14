@@ -23,6 +23,8 @@ import {
   PiCaretRightBold,
 } from "react-icons/pi";
 import { formatRupiah } from "@/lib/money";
+import { formatDate } from "@/lib/date";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { DEFAULT_CATEGORY_LIST, getCategoryById } from "@/lib/categories";
 import type { ExpenseRecord } from "@/types/expense";
 
@@ -31,13 +33,7 @@ interface ExpenseListProps {
 }
 
 function formatToDdMmYyyy(dateStr: string): string {
-  if (!dateStr) return "";
-  const parts = dateStr.split("-");
-  if (parts.length === 3) {
-    const [y, m, d] = parts;
-    return `${d}/${m}/${y}`;
-  }
-  return dateStr;
+  return formatDate(dateStr);
 }
 
 function getPageNumbers(currentPage: number, totalPages: number): (number | string)[] {
@@ -55,71 +51,7 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | stri
   return pages;
 }
 
-interface DatePickerFieldProps {
-  value: string;
-  onChange: (val: string) => void;
-  placeholder?: string;
-  title: string;
-}
 
-function DatePickerField({
-  value,
-  onChange,
-  placeholder = "dd/mm/yyyy",
-  title,
-}: DatePickerFieldProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const display = value ? formatToDdMmYyyy(value) : "";
-
-  return (
-    <div
-      onClick={() => {
-        try {
-          inputRef.current?.showPicker?.();
-        } catch {
-          // ignore if showPicker is unsupported
-        }
-      }}
-      className="relative flex-1 sm:flex-initial min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-2.5 flex items-center justify-between gap-1.5 focus-within:shadow-[3px_3px_0_0_var(--pulpen)] cursor-pointer group"
-    >
-      <div className="flex items-center gap-1.5 min-w-0 overflow-hidden pointer-events-none">
-        <PiCalendarBlankBold className="text-tinta-pudar text-sm sm:text-base shrink-0 group-hover:text-tinta transition-colors" />
-        <span
-          className={`text-xs sm:text-sm truncate select-none ${display ? "text-tinta font-bold" : "text-tinta-pudar font-medium"
-            }`}
-        >
-          {display || placeholder}
-        </span>
-      </div>
-
-      {value ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onChange("");
-          }}
-          title="Hapus tanggal"
-          aria-label="Hapus tanggal"
-          className="relative z-10 p-0.5 text-tinta-pudar hover:text-stempel transition-colors cursor-pointer shrink-0"
-        >
-          <PiXBold className="text-xs" />
-        </button>
-      ) : null}
-
-      <input
-        ref={inputRef}
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        title={title}
-        aria-label={title}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-base"
-        style={{ colorScheme: "dark" }}
-      />
-    </div>
-  );
-}
 
 function toLocalDateString(d: Date): string {
   const y = d.getFullYear();
@@ -246,7 +178,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
     const rows = filteredExpenses.map((e) => {
       const cat = getCategoryById(e.category_id);
       return [
-        `"${e.expense_date}"`,
+        `"${formatDate(e.expense_date)}"`,
         `"${e.name.replace(/"/g, '""')}"`,
         `"${cat.name}"`,
         e.amount,
