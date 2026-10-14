@@ -238,7 +238,7 @@ export function ReviewForm({
           </div>
 
           {/* Tanggal */}
-          <div>
+          <div className="w-full min-w-0">
             <div className="flex items-center justify-between mb-1">
               <label
                 htmlFor="review-date"

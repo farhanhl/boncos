@@ -38,33 +38,33 @@ export function DatePickerField({
           // ignore if showPicker is unsupported
         }
       }}
-      className={`relative min-w-0 bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 flex items-center justify-between gap-2 focus-within:shadow-[3px_3px_0_0_var(--pulpen)] cursor-pointer group ${className}`}
+      className={`relative min-w-0 max-w-full box-border bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 flex items-center justify-between gap-2 focus-within:shadow-[3px_3px_0_0_var(--pulpen)] cursor-pointer group ${className || "w-full"}`}
     >
-      <div className="flex items-center gap-2 min-w-0 overflow-hidden pointer-events-none">
-        <PiCalendarBlankBold className="text-tinta-pudar text-base shrink-0 group-hover:text-tinta transition-colors" />
-        <span
-          className={`text-sm truncate select-none ${
-            display ? "text-tinta font-bold" : "text-tinta-pudar font-medium"
-          }`}
-        >
-          {display || placeholder}
-        </span>
-      </div>
+      <span
+        className={`text-sm truncate select-none pointer-events-none ${
+          display ? "text-tinta font-bold" : "text-tinta-pudar font-medium"
+        }`}
+      >
+        {display || placeholder}
+      </span>
 
-      {showClear && value ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onChange("");
-          }}
-          title="Hapus tanggal"
-          aria-label="Hapus tanggal"
-          className="relative z-10 p-1 text-tinta-pudar hover:text-stempel transition-colors cursor-pointer shrink-0"
-        >
-          <PiXBold className="text-xs" />
-        </button>
-      ) : null}
+      <div className="flex items-center gap-2 shrink-0">
+        {showClear && value ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange("");
+            }}
+            title="Hapus tanggal"
+            aria-label="Hapus tanggal"
+            className="relative z-10 p-1 text-tinta-pudar hover:text-stempel transition-colors cursor-pointer shrink-0"
+          >
+            <PiXBold className="text-xs" />
+          </button>
+        ) : null}
+        <PiCalendarBlankBold className="text-tinta text-lg shrink-0 pointer-events-none" />
+      </div>
 
       <input
         ref={inputRef}
@@ -75,7 +75,7 @@ export function DatePickerField({
         onChange={(e) => onChange(e.target.value)}
         title={title}
         aria-label={title}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-base"
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-base max-w-full overflow-hidden"
         style={{ colorScheme: "dark" }}
       />
     </div>

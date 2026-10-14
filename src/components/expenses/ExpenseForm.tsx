@@ -207,7 +207,7 @@ export function ExpenseForm({
         </div>
 
         {/* Tanggal */}
-        <div>
+        <div className="w-full min-w-0">
           <label
             htmlFor="expense-date"
             className="font-bold text-sm text-tinta mb-1.5 block"
