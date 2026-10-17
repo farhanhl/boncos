@@ -68,7 +68,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             items={categoryBreakdown}
             total={currentTotal}
           />
-          <RecentExpensesList expenses={recentExpenses} />
+          <RecentExpensesList
+            expenses={recentExpenses}
+            customCategories={data?.customCategories || []}
+          />
         </div>
       </div>
     </main>

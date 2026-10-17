@@ -16,20 +16,21 @@ import {
   PiPlusBold,
   PiDownloadSimpleBold,
   PiArrowCounterClockwiseBold,
-  PiCalendarBlankBold,
-  PiXBold,
   PiArrowsLeftRightBold,
   PiCaretLeftBold,
   PiCaretRightBold,
+  PiTagBold,
 } from "react-icons/pi";
 import { formatRupiah } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { DEFAULT_CATEGORY_LIST, getCategoryById } from "@/lib/categories";
+import type { CustomCategoryRecord } from "@/actions/categories";
 import type { ExpenseRecord } from "@/types/expense";
 
 interface ExpenseListProps {
   initialExpenses: ExpenseRecord[];
+  customCategories?: CustomCategoryRecord[];
 }
 
 function formatToDdMmYyyy(dateStr: string): string {
@@ -62,7 +63,10 @@ function toLocalDateString(d: Date): string {
 
 type QuickDatePreset = "all" | "today" | "week" | "month" | "last_month";
 
-export function ExpenseList({ initialExpenses }: ExpenseListProps) {
+export function ExpenseList({
+  initialExpenses,
+  customCategories = [],
+}: ExpenseListProps) {
   const [expenses] = useState<ExpenseRecord[]>(initialExpenses);
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -167,6 +171,8 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
         return <PiGraduationCapBold className="text-xl" />;
       case "PiArrowsLeftRightBold":
         return <PiArrowsLeftRightBold className="text-xl" />;
+      case "PiTagBold":
+        return <PiTagBold className="text-xl" />;
       default:
         return <PiDotsThreeOutlineBold className="text-xl" />;
     }
@@ -176,7 +182,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
     if (filteredExpenses.length === 0) return;
     const headers = ["Tanggal", "Nama", "Kategori", "Nominal", "Sumber", "Catatan"];
     const rows = filteredExpenses.map((e) => {
-      const cat = getCategoryById(e.category_id);
+      const cat = getCategoryById(e.category_id, customCategories);
       return [
         `"${formatDate(e.expense_date)}"`,
         `"${e.name.replace(/"/g, '""')}"`,
@@ -323,11 +329,22 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
             className="w-full sm:w-auto bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
           >
             <option value="">Semua Kategori</option>
-            {DEFAULT_CATEGORY_LIST.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            <optgroup label="Kategori Bawaan">
+              {DEFAULT_CATEGORY_LIST.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
+            {customCategories.length > 0 && (
+              <optgroup label="Kategori Kustom">
+                {customCategories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
 
           {/* Date From & Date To (Full width on mobile, auto on desktop) */}
@@ -400,7 +417,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
           <>
             <div className="divide-y-2 divide-dashed divide-tinta/30">
               {paginatedExpenses.map((expense) => {
-                const cat = getCategoryById(expense.category_id);
+                const cat = getCategoryById(expense.category_id, customCategories);
                 return (
                   <Link
                     key={expense.id}

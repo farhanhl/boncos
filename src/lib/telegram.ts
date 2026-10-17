@@ -5,7 +5,7 @@ import { userCol } from "./firebase/admin";
 import { decryptText } from "./crypto";
 import { formatRupiah } from "./money";
 import { formatDate } from "./date";
-import { getCategoryById } from "./categories";
+import { DEFAULT_CATEGORIES, getCategoryById } from "./categories";
 
 export interface ExpenseNotificationData {
   name: string;
@@ -195,7 +195,25 @@ export async function sendTelegramNotificationForExpense(
     }
 
     const token = decryptText(settings.bot_token_enc);
-    const categoryInfo = getCategoryById(data.category_id);
+    let categoryInfo = getCategoryById(data.category_id);
+    if (data.category_id && !(data.category_id in DEFAULT_CATEGORIES)) {
+      try {
+        const catDoc = await userCol(uid, "categories").doc(data.category_id).get();
+        if (catDoc.exists) {
+          const d = catDoc.data();
+          if (d?.name) {
+            categoryInfo = {
+              id: catDoc.id,
+              name: d.name,
+              color: d.color || "#FF9F45",
+              iconName: d.icon || "PiTagBold",
+            };
+          }
+        }
+      } catch {
+        // Fallback to categoryInfo
+      }
+    }
     const sourceLabel = data.source === "scan" ? "Scan struk" : "Manual";
 
     const messageHtml = [
@@ -247,7 +265,25 @@ export async function sendTelegramScanResult(
 
     let messageHtml = "";
     if (options.success && options.expense) {
-      const categoryInfo = getCategoryById(options.expense.category_id);
+      let categoryInfo = getCategoryById(options.expense.category_id);
+      if (options.expense.category_id && !(options.expense.category_id in DEFAULT_CATEGORIES)) {
+        try {
+          const catDoc = await userCol(uid, "categories").doc(options.expense.category_id).get();
+          if (catDoc.exists) {
+            const d = catDoc.data();
+            if (d?.name) {
+              categoryInfo = {
+                id: catDoc.id,
+                name: d.name,
+                color: d.color || "#FF9F45",
+                iconName: d.icon || "PiTagBold",
+              };
+            }
+          }
+        } catch {
+          // Fallback
+        }
+      }
       messageHtml = [
         "🧾 <b>Pencatatan Struk Berhasil!</b>",
         `Nama: <b>${escapeHtml(options.expense.name)}</b>`,

@@ -2,14 +2,16 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { PiCameraBold, PiPencilSimpleBold } from "react-icons/pi";
+import type { CustomCategoryRecord } from "@/actions/categories";
 import { ExpenseForm } from "./ExpenseForm";
 import { ScanFlow } from "./ScanFlow";
 
 interface NewExpenseTabsProps {
   scanComponent?: React.ReactNode;
+  customCategories?: CustomCategoryRecord[];
 }
 
-export function NewExpenseTabs({ scanComponent }: NewExpenseTabsProps) {
+export function NewExpenseTabs({ scanComponent, customCategories }: NewExpenseTabsProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeTab = searchParams.get("tab") === "manual" ? "manual" : "scan";
@@ -53,9 +55,9 @@ export function NewExpenseTabs({ scanComponent }: NewExpenseTabsProps) {
 
       {/* Tab Content */}
       {activeTab === "scan" ? (
-        scanComponent || <ScanFlow />
+        scanComponent || <ScanFlow customCategories={customCategories} />
       ) : (
-        <ExpenseForm sourceDefault="manual" />
+        <ExpenseForm sourceDefault="manual" customCategories={customCategories} />
       )}
     </div>
   );

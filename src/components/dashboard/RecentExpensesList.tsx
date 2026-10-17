@@ -2,13 +2,18 @@ import Link from "next/link";
 import { formatRupiah } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { getCategoryById } from "@/lib/categories";
+import type { CustomCategoryRecord } from "@/actions/categories";
 import type { ExpenseRecord } from "@/types/expense";
 
 interface RecentExpensesListProps {
   expenses: ExpenseRecord[];
+  customCategories?: CustomCategoryRecord[];
 }
 
-export function RecentExpensesList({ expenses }: RecentExpensesListProps) {
+export function RecentExpensesList({
+  expenses,
+  customCategories = [],
+}: RecentExpensesListProps) {
   if (expenses.length === 0) {
     return (
       <div className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard text-center space-y-2">
@@ -35,7 +40,7 @@ export function RecentExpensesList({ expenses }: RecentExpensesListProps) {
 
       <div className="divide-y-2 divide-dashed divide-tinta/20">
         {expenses.map((e) => {
-          const cat = getCategoryById(e.category_id);
+          const cat = getCategoryById(e.category_id, customCategories);
           return (
             <Link
               key={e.id}

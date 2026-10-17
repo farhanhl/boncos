@@ -3,6 +3,7 @@
 import { getCurrentUser } from "@/lib/firebase/session";
 import { userCol } from "@/lib/firebase/admin";
 import { getCategoryById } from "@/lib/categories";
+import type { CustomCategoryRecord } from "@/actions/categories";
 import type { ExpenseRecord } from "@/types/expense";
 
 export interface CategorySummaryItem {
@@ -23,6 +24,7 @@ export interface DashboardSummaryData {
   recentExpenses: ExpenseRecord[];
   categoryBreakdown: CategorySummaryItem[];
   monthlyBudget: number;
+  customCategories: CustomCategoryRecord[];
 }
 
 export async function getDashboardSummary(
@@ -132,10 +134,28 @@ export async function getDashboardSummary(
         .slice(0, 5);
     }
 
+    // Fetch custom categories for name/color resolution
+    let customCategories: CustomCategoryRecord[] = [];
+    try {
+      const customCatsSnap = await userCol(user.uid, "categories").orderBy("created_at", "asc").get();
+      customCategories = customCatsSnap.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          name: d.name,
+          icon: d.icon || "PiTagBold",
+          color: d.color || "#FF9F45",
+          created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : new Date().toISOString(),
+        };
+      });
+    } catch {
+      customCategories = [];
+    }
+
     // Breakdown array sorted by total
     const categoryBreakdown: CategorySummaryItem[] = Array.from(catMap.entries())
       .map(([catId, stats]) => {
-        const catInfo = getCategoryById(catId);
+        const catInfo = getCategoryById(catId, customCategories);
         return {
           categoryId: catId,
           name: catInfo.name,
@@ -171,6 +191,7 @@ export async function getDashboardSummary(
         recentExpenses,
         categoryBreakdown,
         monthlyBudget,
+        customCategories,
       },
     };
   } catch (err) {
