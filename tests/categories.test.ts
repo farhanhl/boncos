@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getCategoryById, DEFAULT_CATEGORIES } from "@/lib/categories";
+import { getCategoryById } from "@/lib/categories";
 
 describe("Category Utility (lib/categories.ts)", () => {
   it("resolves default category slugs correctly", () => {

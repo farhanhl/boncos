@@ -9,7 +9,19 @@ const IGNORE_DATE_KEYWORDS = [
   "VALID",
 ];
 
-const DATE_LABEL_KEYWORDS = ["TANGGAL", "TGL", "DATE", "WAKTU", "TIME"];
+const DATE_LABEL_KEYWORDS = [
+  "CREATED TIME",
+  "PAYMENT TIME",
+  "TRANSACTION TIME",
+  "WAKTU TRANSAKSI",
+  "WAKTU PEMBAYARAN",
+  "WAKTU DIBUAT",
+  "TANGGAL",
+  "TGL",
+  "DATE",
+  "WAKTU",
+  "TIME",
+];
 
 const MONTH_MAP: Record<string, number> = {
   JAN: 1,
@@ -91,7 +103,7 @@ export function extractDate(
           return {
             field: {
               value: dateStr,
-              confidence: isOld ? 0.4 : hasLabel || hasTime ? 0.9 : 0.8,
+              confidence: isOld ? 0.4 : hasLabel && hasTime ? 0.95 : hasLabel || hasTime ? 0.9 : 0.8,
               rule: "named_month",
             },
             warning: isOld ? "Tanggal lebih dari setahun lalu" : undefined,

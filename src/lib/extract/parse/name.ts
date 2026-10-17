@@ -130,6 +130,36 @@ const GENERIC_KEYWORDS = [
   "BENEFICIARY",
   "BENEFICIARY NAME",
   "NAMA MERCHANT",
+  "COMPLETED",
+  "ORDER DETAILS",
+  "ORDER DETAIL",
+  "THANK YOU FOR PURCHASING",
+  "PURCHASING DIGITAL PRODUCTS",
+  "DIGITAL PRODUCTS",
+  "PRODUK DIGITAL",
+  "BUY AGAIN",
+  "BELI LAGI",
+  "PAYMENT INFO",
+  "INFO PEMBAYARAN",
+  "SERIAL NUMBER",
+  "NOMOR SERIAL",
+  "ORDER ID",
+  "NO. PESANAN",
+  "NOMOR PESANAN",
+  "PHONE NUMBER",
+  "NOMOR TELEPON",
+  "NOMOR HP",
+  "NO. HP",
+  "NO HP",
+];
+
+const CELLULAR_PROVIDERS: { pattern: RegExp; name: string }[] = [
+  { pattern: /\b(?:THREE|TRI)\b/i, name: "Three" },
+  { pattern: /\b(?:TELKOMSEL|SIMPATI|KARTU\s*AS|BY\.?U)\b/i, name: "Telkomsel" },
+  { pattern: /\b(?:INDOSAT|IM3|OOREDOO)\b/i, name: "Indosat" },
+  { pattern: /\b(?:XL\s*AXIATA|\bXL\b)\b/i, name: "XL" },
+  { pattern: /\b(?:AXIS)\b/i, name: "Axis" },
+  { pattern: /\b(?:SMARTFREN)\b/i, name: "Smartfren" },
 ];
 
 function cleanRecipientCandidate(raw: string): string {
@@ -150,6 +180,53 @@ export function extractName(
   lines: NormalizedLine[],
   docType: DocumentType
 ): Field<string> {
+  // Strategy 0: Pulsa / Paket Data / Cellular digital products
+  const fullText = lines.map((l) => l.upper).join(" ");
+  const hasPhoneContext =
+    /\b(PHONE\s*NUMBER|NOMOR\s*(?:HP|HANDPHONE|TELEPON|TELP|PONSEL)|NO\.?\s*(?:HP|TELEPON|TELP)|MSISDN)\b/i.test(
+      fullText
+    ) || /\b08[1-9]\d{7,10}\b/.test(fullText);
+  const hasDigitalContext =
+    /\b(PULSA|PAKET\s*DATA|DATA\s*PACKAGE|PRODUK\s*DIGITAL|DIGITAL\s*PRODUCTS?|ISI\s*ULANG|TOP\s*UP)\b/i.test(
+      fullText
+    );
+
+  // Even / round nominal pattern (e.g. 5.000, 10.000, 25.000, 50.000, 100.000, 10k, 25rb)
+  const ROUND_PULSA_DENOM_REGEX = /\b(?:[1-9]\d{0,2}(?:\.000|\s*000|k|rb)|1\.000\.000)\b/i;
+
+  for (const line of lines) {
+    if (!line) continue;
+    const upper = line.upper;
+    // Skip generic informational/banner lines
+    if (
+      upper.includes("THANK YOU") ||
+      upper.includes("PURCHASING") ||
+      upper.includes("DIGITAL PRODUCTS") ||
+      upper.includes("PRODUK DIGITAL")
+    ) {
+      continue;
+    }
+
+    for (const provider of CELLULAR_PROVIDERS) {
+      if (provider.pattern.test(upper)) {
+        const hasRoundDenom = ROUND_PULSA_DENOM_REGEX.test(upper);
+        const hasPulsaWord = /\b(PULSA|PAKET|DATA|QUOTA|KUOTA)\b/i.test(upper);
+
+        if (hasPhoneContext || hasDigitalContext || hasRoundDenom || hasPulsaWord) {
+          const isData = /\b(DATA|PAKET|QUOTA|KUOTA)\b/i.test(upper);
+          const finalName = isData
+            ? `Pembayaran paket data ${provider.name}`
+            : `Pembayaran pulsa ${provider.name}`;
+
+          return {
+            value: finalName,
+            confidence: 0.95,
+            rule: `digital_pulsa:${provider.name.toLowerCase()}`,
+          };
+        }
+      }
+    }
+  }
   // Strategy 1: Explicit recipient / beneficiary labels (E-wallet, Bank Transfer, or Labeled receipts)
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
