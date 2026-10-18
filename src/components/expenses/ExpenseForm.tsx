@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DEFAULT_CATEGORY_LIST } from "@/lib/categories";
 import { formatRupiah, parseRupiahInput } from "@/lib/money";
-import { formatDate } from "@/lib/date";
+import { formatDate, formatTime } from "@/lib/date";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { createExpense, updateExpense, deleteExpense } from "@/actions/expenses";
 import { listCustomCategories, type CustomCategoryRecord } from "@/actions/categories";
@@ -172,9 +172,15 @@ export function ExpenseForm({
         </div>
       )}
 
-      <h2 className="font-display text-2xl text-tinta mb-4">
+      <h2 className="font-display text-2xl text-tinta mb-1">
         {initialData ? "Ubah Pengeluaran" : "Catat Pengeluaran"}
       </h2>
+      {initialData?.created_at && (
+        <p className="text-xs text-tinta-pudar mb-4 font-medium" suppressHydrationWarning>
+          Diinput pada: {formatDate(initialData.created_at)} • {formatTime(initialData.created_at)}
+        </p>
+      )}
+      {!initialData?.created_at && <div className="mb-4" />}
 
       {errorMessage && (
         <div className="mb-4 p-3 bg-stempel/10 border-2 border-stempel rounded-md text-stempel text-sm font-semibold">

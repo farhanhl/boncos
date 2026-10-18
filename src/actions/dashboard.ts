@@ -128,9 +128,19 @@ export async function getDashboardSummary(
           updated_at: d.updated_at?.toDate ? d.updated_at.toDate().toISOString() : new Date().toISOString(),
         };
       });
+
+      recentExpenses.sort((a, b) => {
+        const dateComp = b.expense_date.localeCompare(a.expense_date);
+        if (dateComp !== 0) return dateComp;
+        return (b.created_at || "").localeCompare(a.created_at || "");
+      });
     } catch {
       recentExpenses = [...thisMonthExpenses]
-        .sort((a, b) => b.expense_date.localeCompare(a.expense_date))
+        .sort((a, b) => {
+          const dateComp = b.expense_date.localeCompare(a.expense_date);
+          if (dateComp !== 0) return dateComp;
+          return (b.created_at || "").localeCompare(a.created_at || "");
+        })
         .slice(0, 5);
     }
 

@@ -22,7 +22,7 @@ import {
   PiTagBold,
 } from "react-icons/pi";
 import { formatRupiah } from "@/lib/money";
-import { formatDate } from "@/lib/date";
+import { formatDate, formatTime } from "@/lib/date";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { DEFAULT_CATEGORY_LIST, getCategoryById } from "@/lib/categories";
 import type { CustomCategoryRecord } from "@/actions/categories";
@@ -133,7 +133,13 @@ export function ExpenseList({
 
   const activePreset = getActivePreset();
 
-  const filteredExpenses = expenses.filter((item) => {
+  const sortedExpenses = [...expenses].sort((a, b) => {
+    const dateComp = b.expense_date.localeCompare(a.expense_date);
+    if (dateComp !== 0) return dateComp;
+    return (b.created_at || "").localeCompare(a.created_at || "");
+  });
+
+  const filteredExpenses = sortedExpenses.filter((item) => {
     if (filterCategory && item.category_id !== filterCategory) return false;
     if (searchQuery && !item.name_lower.includes(searchQuery.toLowerCase())) return false;
     if (fromDate && item.expense_date < fromDate) return false;
@@ -439,6 +445,14 @@ export function ExpenseList({
                         </h3>
                         <div className="flex items-center gap-2 text-xs text-tinta-pudar mt-0.5 truncate">
                           <span className="shrink-0">{formatToDdMmYyyy(expense.expense_date)}</span>
+                          {expense.created_at && (
+                            <>
+                              <span>•</span>
+                              <span className="shrink-0 font-medium" suppressHydrationWarning>
+                                {formatTime(expense.created_at)}
+                              </span>
+                            </>
+                          )}
                           <span>•</span>
                           <span className="truncate">{cat.name}</span>
                           {expense.source === "scan" && (

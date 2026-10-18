@@ -243,6 +243,13 @@ export async function listExpenses(
       };
     });
 
+    // Sort by expense_date DESC, then created_at DESC for consistent ordering
+    records.sort((a, b) => {
+      const dateComp = b.expense_date.localeCompare(a.expense_date);
+      if (dateComp !== 0) return dateComp;
+      return (b.created_at || "").localeCompare(a.created_at || "");
+    });
+
     // In-memory prefix filter if q provided (v1 prefix search)
     if (q && q.trim()) {
       const qLower = q.trim().toLowerCase();

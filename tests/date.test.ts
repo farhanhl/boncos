@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDate, toIsoDateString } from "@/lib/date";
+import { formatDate, toIsoDateString, formatTime } from "@/lib/date";
 
 describe("Date Utility (lib/date.ts)", () => {
   describe("formatDate", () => {
@@ -36,4 +36,19 @@ describe("Date Utility (lib/date.ts)", () => {
       expect(toIsoDateString(d)).toBe("2026-10-14");
     });
   });
+
+  describe("formatTime", () => {
+    it("formats Date objects into HH:mm", () => {
+      const d = new Date(2026, 9, 18, 14, 5);
+      expect(formatTime(d)).toBe("14:05");
+    });
+
+    it("handles null, undefined, and empty string safely", () => {
+      expect(formatTime("")).toBe("");
+      expect(formatTime(null)).toBe("");
+      expect(formatTime(undefined)).toBe("");
+      expect(formatTime("invalid-date")).toBe("");
+    });
+  });
 });
+

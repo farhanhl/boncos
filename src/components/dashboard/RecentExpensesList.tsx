@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatRupiah } from "@/lib/money";
-import { formatDate } from "@/lib/date";
+import { formatDate, formatTime } from "@/lib/date";
 import { getCategoryById } from "@/lib/categories";
 import type { CustomCategoryRecord } from "@/actions/categories";
 import type { ExpenseRecord } from "@/types/expense";
@@ -55,8 +55,12 @@ export function RecentExpensesList({
                 <span className="font-bold text-sm text-tinta truncate group-hover:text-kuning transition-colors">
                   {e.name}
                 </span>
-                <span className="text-xs text-tinta-pudar shrink-0 bg-karbon/40 px-1.5 py-0.5 rounded border border-tinta/20">
+                <span
+                  className="text-xs text-tinta-pudar shrink-0 bg-karbon/40 px-1.5 py-0.5 rounded border border-tinta/20 font-medium"
+                  suppressHydrationWarning
+                >
                   {formatDate(e.expense_date)}
+                  {e.created_at ? ` • ${formatTime(e.created_at)}` : ""}
                 </span>
               </div>
 
