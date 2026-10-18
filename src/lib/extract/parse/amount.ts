@@ -5,6 +5,7 @@ import { findMoneyTokens } from "./money";
 const STRONG_TOTAL_KEYWORDS = [
   "GRAND TOTAL",
   "TOTAL PAYMENT",
+  "TOTAL PESANAN",
   "TOTAL BAYAR",
   "TOTAL PEMBAYARAN",
   "TOTAL TAGIHAN",

@@ -72,6 +72,7 @@ const GENERIC_KEYWORDS = [
   "GET REWARD",
   "TRANSACTION STATUS",
   "METODE PEMBAYARAN",
+  "QRIS",
   "AMBIL PESANAN",
   "REPUBLIK INDONESIA",
   "KARTU TANDA PENDUDUK",
@@ -151,6 +152,19 @@ const GENERIC_KEYWORDS = [
   "NOMOR HP",
   "NO. HP",
   "NO HP",
+  "ALAMAT PENGIRIMAN",
+  "ALAMAT PENERIMA",
+  "HUBUNGI PENJUAL",
+  "CUSTOMER SERVICE",
+  "CUSTOMER SERVICE PRIORITAS",
+  "BATALKAN PESANAN",
+  "LIHAT LEBIH SEDIKIT",
+  "BUTUH BANTUAN",
+  "DENGAN VIP",
+  "KAMU SUDAH HEMAT",
+  "WAKTU PEMESANAN",
+  "WAKTU PEMBAYARAN",
+  "KONVERSI TRANSAKSI",
 ];
 
 const CELLULAR_PROVIDERS: { pattern: RegExp; name: string }[] = [
@@ -174,6 +188,33 @@ function cleanRecipientCandidate(raw: string): string {
     })
     .trim();
   return cleaned;
+}
+
+function cleanProductCandidate(raw: string): string {
+  let cleaned = raw.replace(/^[®@©\*\-><~•|#_:\(\)\[\]\{\}\s/]+/, "").trim();
+  // Strip leading 1-2 letter thumbnail noise (e.g. "Ea Telur Ayam" -> "Telur Ayam")
+  cleaned = cleaned
+    .replace(/^(?!(?:ES|MI|PT|CV|UD)\b)[a-z]{1,2}\s+(?=[a-zA-Z]{2,})/i, "")
+    .trim();
+  return cleaned;
+}
+
+function isProductItemFollower(line: NormalizedLine | undefined): boolean {
+  if (!line) return false;
+  const text = line.normalized.trim();
+  // Quantity patterns: "1kg x5", "x5", "x 1", "2 pcs", "Qty: 1", "500gr x 2"
+  if (
+    /\b(?:x\s*\d+|\d+\s*x\b|\d+\s*(?:kg|gr|g|ml|l|pcs|buah|btl|box|paket)\s*x\s*\d+|\bqty\b)/i.test(
+      text
+    )
+  ) {
+    return true;
+  }
+  // Price line: "Rp30.000", "Rp 25.000"
+  if (/^(?:Rp|IDR)\s*[\d\.,]+$/i.test(text)) {
+    return true;
+  }
+  return false;
 }
 
 export function extractName(
@@ -223,6 +264,52 @@ export function extractName(
             confidence: 0.95,
             rule: `digital_pulsa:${provider.name.toLowerCase()}`,
           };
+        }
+      }
+    }
+  }
+
+  // Strategy 0.5: Marketplace / E-commerce Order Detail (Shopee, Tokopedia, etc.)
+  const hasMarketplaceContext =
+    (/\b(?:ALAMAT\s*PENGIRIMAN|HUBUNGI\s*PENJUAL|TOTAL\s*PESANAN|BATALKAN\s*PESANAN)\b/i.test(
+      fullText
+    ) ||
+      (/\b(?:RINCIAN\s*PESANAN|DETAIL\s*PESANAN)\b/i.test(fullText) &&
+        /\b(?:PENGIRIMAN|KURIR|ONGKIR|LACAK|PENJUAL)\b/i.test(fullText))) &&
+    !/\b(?:DINE-IN|DINE\s*IN|TAKE\s*AWAY|TAKEAWAY|MEJA|PB1)\b/i.test(fullText);
+
+  if (hasMarketplaceContext) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+      const upper = line.upper;
+
+      // Skip generic/order meta lines or address/phone lines
+      if (
+        GENERIC_KEYWORDS.some((kw) => upper.includes(kw)) ||
+        ADDRESS_PHONE_REGEX.test(upper) ||
+        /\d{9,}/.test(line.normalized)
+      ) {
+        continue;
+      }
+
+      // Check if next line is an item follower (quantity or unit price)
+      const nextLine = lines[i + 1];
+      if (isProductItemFollower(nextLine)) {
+        const cleaned = cleanProductCandidate(line.normalized);
+        if (
+          cleaned.length >= 3 &&
+          !GENERIC_KEYWORDS.some((kw) => cleaned.toUpperCase().includes(kw)) &&
+          !ADDRESS_PHONE_REGEX.test(cleaned)
+        ) {
+          const letterChars = cleaned.match(/[a-zA-Z]/g) || [];
+          if (letterChars.length >= 3 && letterChars.length / cleaned.length >= 0.4) {
+            return {
+              value: toTitleCase(cleaned).slice(0, 60),
+              confidence: 0.95,
+              rule: "marketplace_order_item",
+            };
+          }
         }
       }
     }
@@ -360,6 +447,10 @@ export function toTitleCase(str: string): string {
     .replace(/(?:^|\s|\/|-)\S/g, (char) => char.toUpperCase())
     .replace(/\bKe\b/g, "ke")
     .replace(/\bDi\b/g, "di")
-    .replace(/\bDari\b/g, "dari");
+    .replace(/\bDari\b/g, "dari")
+    .replace(/\bKg\b/g, "kg")
+    .replace(/\bGr\b/g, "gr")
+    .replace(/\bMl\b/g, "ml")
+    .replace(/\bPcs\b/g, "pcs");
 }
 

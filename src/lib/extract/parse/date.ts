@@ -9,13 +9,27 @@ const IGNORE_DATE_KEYWORDS = [
   "VALID",
 ];
 
-const DATE_LABEL_KEYWORDS = [
-  "CREATED TIME",
+const PAYMENT_DATE_LABELS = [
   "PAYMENT TIME",
+  "WAKTU PEMBAYARAN",
+  "TANGGAL PEMBAYARAN",
+  "TANGGAL BAYAR",
+  "WAKTU BAYAR",
+  "PAID AT",
+];
+
+const TRANSACTION_DATE_LABELS = [
   "TRANSACTION TIME",
   "WAKTU TRANSAKSI",
-  "WAKTU PEMBAYARAN",
+  "WAKTU SELESAI",
+  "COMPLETED AT",
+];
+
+const GENERAL_DATE_LABELS = [
+  "CREATED TIME",
   "WAKTU DIBUAT",
+  "WAKTU PEMESANAN",
+  "ORDER TIME",
   "TANGGAL",
   "TGL",
   "DATE",
@@ -65,6 +79,15 @@ const MONTH_MAP: Record<string, number> = {
   DECEMBER: 12,
 };
 
+interface DateCandidate {
+  dateStr: string;
+  confidence: number;
+  priority: number;
+  rule: string;
+  lineIndex: number;
+  warning?: string;
+}
+
 export function extractDate(
   lines: NormalizedLine[]
 ): { field: Field<string>; warning?: string } {
@@ -72,13 +95,20 @@ export function extractDate(
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
 
-  for (const line of lines) {
+  const candidates: DateCandidate[] = [];
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
+    if (!line) continue;
     const upper = line.upper;
     if (IGNORE_DATE_KEYWORDS.some((kw) => upper.includes(kw))) {
       continue;
     }
 
-    const hasLabel = DATE_LABEL_KEYWORDS.some((kw) => upper.includes(kw));
+    const isPayment = PAYMENT_DATE_LABELS.some((kw) => upper.includes(kw));
+    const isTransaction = TRANSACTION_DATE_LABELS.some((kw) => upper.includes(kw));
+    const isGeneral = GENERAL_DATE_LABELS.some((kw) => upper.includes(kw));
+    const hasLabel = isPayment || isTransaction || isGeneral;
     const hasTime = /\b\d{1,2}:\d{2}(?::\d{2})?\b/.test(upper);
 
     // 1. Check Named Month: "8 Okt 2026", "08 OCT 2026", "8 Agustus 2026", "08-Oct-2026"
@@ -100,14 +130,17 @@ export function extractDate(
         if (parsedDate <= tomorrow) {
           const dateStr = formatDateIso(y, m, d);
           const isOld = parsedDate < oneYearAgo;
-          return {
-            field: {
-              value: dateStr,
-              confidence: isOld ? 0.4 : hasLabel && hasTime ? 0.95 : hasLabel || hasTime ? 0.9 : 0.8,
-              rule: "named_month",
-            },
+          const priority = isPayment ? 100 : isTransaction ? 80 : isGeneral ? 60 : hasTime ? 40 : 20;
+          const confidence = isOld ? 0.4 : isPayment || (hasLabel && hasTime) ? 0.95 : hasLabel || hasTime ? 0.9 : 0.8;
+          candidates.push({
+            dateStr,
+            confidence,
+            priority,
+            rule: "named_month",
+            lineIndex,
             warning: isOld ? "Tanggal lebih dari setahun lalu" : undefined,
-          };
+          });
+          continue;
         }
       }
     }
@@ -124,14 +157,17 @@ export function extractDate(
         if (parsedDate <= tomorrow) {
           const dateStr = formatDateIso(y, m, d);
           const isOld = parsedDate < oneYearAgo;
-          return {
-            field: {
-              value: dateStr,
-              confidence: isOld ? 0.4 : hasLabel || hasTime ? 0.9 : 0.75,
-              rule: "iso_date",
-            },
+          const priority = isPayment ? 100 : isTransaction ? 80 : isGeneral ? 60 : hasTime ? 40 : 20;
+          const confidence = isOld ? 0.4 : isPayment || (hasLabel && hasTime) ? 0.95 : hasLabel || hasTime ? 0.9 : 0.75;
+          candidates.push({
+            dateStr,
+            confidence,
+            priority,
+            rule: "iso_date",
+            lineIndex,
             warning: isOld ? "Tanggal lebih dari setahun lalu" : undefined,
-          };
+          });
+          continue;
         }
       }
     }
@@ -157,16 +193,39 @@ export function extractDate(
         if (parsedDate <= tomorrow) {
           const dateStr = formatDateIso(y, m, d);
           const isOld = parsedDate < oneYearAgo;
-          return {
-            field: {
-              value: dateStr,
-              confidence: isOld ? 0.4 : hasLabel || hasTime ? 0.9 : 0.75,
-              rule: "numeric_date",
-            },
+          const priority = isPayment ? 100 : isTransaction ? 80 : isGeneral ? 60 : hasTime ? 40 : 20;
+          const confidence = isOld ? 0.4 : isPayment || (hasLabel && hasTime) ? 0.95 : hasLabel || hasTime ? 0.9 : 0.75;
+          candidates.push({
+            dateStr,
+            confidence,
+            priority,
+            rule: "numeric_date",
+            lineIndex,
             warning: isOld ? "Tanggal lebih dari setahun lalu" : undefined,
-          };
+          });
+          continue;
         }
       }
+    }
+  }
+
+  if (candidates.length > 0) {
+    // Sort descending by priority, then by lineIndex ascending
+    candidates.sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      return a.lineIndex - b.lineIndex;
+    });
+
+    const chosen = candidates[0];
+    if (chosen) {
+      return {
+        field: {
+          value: chosen.dateStr,
+          confidence: chosen.confidence,
+          rule: chosen.rule,
+        },
+        warning: chosen.warning,
+      };
     }
   }
 
