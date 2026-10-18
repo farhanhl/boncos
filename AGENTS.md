@@ -3,7 +3,7 @@
 ## Konteks
 Aplikasi pencatatan keuangan (Next.js + Firebase). Ekstraksi pengeluaran dari gambar mendukung 2 mode yang dapat dipilih melalui environment variable `EXTRACTION_MODE`:
 1. **Mode OCR (`EXTRACTION_MODE=ocr` / default)**: Tanpa AI, memakai Tesseract.js + parser aturan di browser.
-2. **Mode AI (`EXTRACTION_MODE=ai`)**: Memakai AI di server (konfigurasi model via `AI_MODEL`, provider default Gemini via `GEMINI_API_KEY`) untuk ekstraksi JSON terstruktur dari gambar, dengan fallback otomatis ke OCR bila gagal/kuota habis.
+2. **Mode AI (`EXTRACTION_MODE=ai`)**: Memakai AI di server (konfigurasi model via `AI_MODEL`, provider default Gemini via `AI_API_KEY`) untuk ekstraksi JSON terstruktur dari gambar, dengan fallback otomatis ke OCR bila gagal/kuota habis.
 Ada notifikasi Telegram opsional. Dokumen acuan: `PRD.md`, `ARCHITECTURE.md`, `DATABASE.md`, `EXTRACTION.md`, `API.md`, `DESIGN.md`, `TASKS.md`.
 
 ## Aturan Wajib

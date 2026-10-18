@@ -35,7 +35,7 @@ const VALID_DOC_TYPES: DocumentType[] = [
  */
 export function isAiExtractionEnabled(): boolean {
   const mode = (process.env.EXTRACTION_MODE || "").toLowerCase().trim();
-  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  const apiKey = (process.env.AI_API_KEY || "").trim();
   return (mode === "ai" || mode === "gemini") && apiKey.length > 0;
 }
 
@@ -48,9 +48,9 @@ export async function extractReceiptWithGemini(
   imageBuffer: Buffer,
   mimeType = "image/jpeg"
 ): Promise<ExtractionResult> {
-  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  const apiKey = (process.env.AI_API_KEY || "").trim();
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY belum dikonfigurasi di environment variable.");
+    throw new Error("AI_API_KEY belum dikonfigurasi di environment variable.");
   }
 
   const model = process.env.AI_MODEL || "gemini-2.5-flash";

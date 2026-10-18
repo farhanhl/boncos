@@ -17,44 +17,38 @@ describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
   describe("isGeminiExtractionEnabled", () => {
     it("returns false if EXTRACTION_MODE is ocr or unset", () => {
       delete process.env.EXTRACTION_MODE;
-      process.env.GEMINI_API_KEY = "test-key";
+      process.env.AI_API_KEY = "test-key";
       expect(isGeminiExtractionEnabled()).toBe(false);
 
       process.env.EXTRACTION_MODE = "ocr";
       expect(isGeminiExtractionEnabled()).toBe(false);
     });
 
-    it("returns false if EXTRACTION_MODE is gemini but GEMINI_API_KEY is empty", () => {
-      process.env.EXTRACTION_MODE = "gemini";
-      delete process.env.GEMINI_API_KEY;
-      expect(isGeminiExtractionEnabled()).toBe(false);
-
-      process.env.GEMINI_API_KEY = "   ";
-      expect(isGeminiExtractionEnabled()).toBe(false);
-    });
-
-    it("returns true when EXTRACTION_MODE is ai and GEMINI_API_KEY is present", () => {
+    it("returns false if EXTRACTION_MODE is ai but AI_API_KEY is empty", () => {
       process.env.EXTRACTION_MODE = "ai";
-      process.env.GEMINI_API_KEY = "dummy-api-key";
-      expect(isGeminiExtractionEnabled()).toBe(true);
+      delete process.env.AI_API_KEY;
+      expect(isGeminiExtractionEnabled()).toBe(false);
+
+      process.env.AI_API_KEY = "   ";
+      expect(isGeminiExtractionEnabled()).toBe(false);
     });
 
-    it("returns true when EXTRACTION_MODE is gemini and GEMINI_API_KEY is present", () => {
-      process.env.EXTRACTION_MODE = "gemini";
-      process.env.GEMINI_API_KEY = "dummy-api-key";
+    it("returns true when EXTRACTION_MODE is ai and AI_API_KEY is present", () => {
+      process.env.EXTRACTION_MODE = "ai";
+      process.env.AI_API_KEY = "dummy-api-key";
       expect(isGeminiExtractionEnabled()).toBe(true);
     });
   });
 
   describe("extractReceiptWithGemini", () => {
-    it("throws error if GEMINI_API_KEY is missing", async () => {
-      delete process.env.GEMINI_API_KEY;
+    it("throws error if AI_API_KEY is missing", async () => {
+      delete process.env.AI_API_KEY;
       const buffer = Buffer.from("dummy-image-bytes");
-      await expect(extractReceiptWithGemini(buffer)).rejects.toThrow("GEMINI_API_KEY");
+      await expect(extractReceiptWithGemini(buffer)).rejects.toThrow("AI_API_KEY");
     });
 
     it("parses successful Gemini JSON response into ExtractionResult", async () => {
-      process.env.GEMINI_API_KEY = "dummy-key";
+      process.env.AI_API_KEY = "dummy-key";
       process.env.AI_MODEL = "gemini-2.5-flash";
 
       const mockGeminiJson = {
@@ -95,7 +89,7 @@ describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
 
 
     it("handles partial extraction from Gemini gracefully", async () => {
-      process.env.GEMINI_API_KEY = "dummy-key";
+      process.env.AI_API_KEY = "dummy-key";
 
       const mockPartialJson = {
         name: "Warkop Lina",
