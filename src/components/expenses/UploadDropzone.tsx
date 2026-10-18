@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { PiCameraBold, PiUploadSimpleBold, PiWarningBold } from "react-icons/pi";
 import { extractFromImage, ExtractionError } from "@/lib/extract";
+import { extractReceiptAction } from "@/actions/extract";
 import type { ExtractionResult } from "@/lib/extract/types";
 
 interface UploadDropzoneProps {
@@ -30,13 +31,37 @@ export function UploadDropzone({
       setStatusText("Lagi baca struknya");
 
       try {
-        const result = await extractFromImage(file, (status) => {
-          if (status.includes("loading") || status.includes("init")) {
-            setStatusText("Menyiapkan pembaca struk, cukup sekali");
-          } else if (status.includes("recognizing")) {
-            setStatusText("Lagi baca struknya");
+        let result: ExtractionResult;
+        const isGeminiMode = process.env.NEXT_PUBLIC_EXTRACTION_MODE === "gemini";
+
+        if (isGeminiMode) {
+          setStatusText("Menganalisis struk dengan Gemini AI...");
+          const formData = new FormData();
+          formData.append("image", file);
+          const aiRes = await extractReceiptAction(formData);
+
+          if (aiRes.ok && aiRes.data) {
+            result = aiRes.data;
+          } else {
+            // Fallback ke OCR lokal jika server/AI gagal atau kuota habis
+            setStatusText("Beralih ke pembaca struk lokal...");
+            result = await extractFromImage(file, (status) => {
+              if (status.includes("loading") || status.includes("init")) {
+                setStatusText("Menyiapkan pembaca struk, cukup sekali");
+              } else if (status.includes("recognizing")) {
+                setStatusText("Lagi baca struknya");
+              }
+            });
           }
-        });
+        } else {
+          result = await extractFromImage(file, (status) => {
+            if (status.includes("loading") || status.includes("init")) {
+              setStatusText("Menyiapkan pembaca struk, cukup sekali");
+            } else if (status.includes("recognizing")) {
+              setStatusText("Lagi baca struknya");
+            }
+          });
+        }
 
         setIsProcessing(false);
         onExtractionSuccess(result, file);

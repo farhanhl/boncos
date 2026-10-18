@@ -1,15 +1,18 @@
 # AGENTS.md — Aturan untuk AI Coding Agent
 
 ## Konteks
-Aplikasi pencatatan keuangan (Next.js + Firebase). Ekstraksi pengeluaran dari gambar dilakukan **tanpa AI**, memakai OCR + parser aturan di browser. Ada notifikasi Telegram opsional. Dokumen acuan:
-`PRD.md` (apa), `ARCHITECTURE.md` (bagaimana), `DATABASE.md` (struktur Firestore), `EXTRACTION.md` (OCR & parser), `API.md` (kontrak), `DESIGN.md` (UI), `TASKS.md` (urutan kerja).
-Jika dokumen bertentangan dengan permintaan, **tanya dulu**; jangan menebak.
+Aplikasi pencatatan keuangan (Next.js + Firebase). Ekstraksi pengeluaran dari gambar mendukung 2 mode yang dapat dipilih melalui environment variable `EXTRACTION_MODE`:
+1. **Mode OCR (`EXTRACTION_MODE=ocr` / default)**: Tanpa AI, memakai Tesseract.js + parser aturan di browser.
+2. **Mode Gemini AI (`EXTRACTION_MODE=gemini`)**: Memakai Google Gemini API di server untuk ekstraksi JSON terstruktur dari gambar, dengan fallback otomatis ke OCR bila gagal/kuota habis.
+Ada notifikasi Telegram opsional. Dokumen acuan: `PRD.md`, `ARCHITECTURE.md`, `DATABASE.md`, `EXTRACTION.md`, `API.md`, `DESIGN.md`, `TASKS.md`.
 
 ## Aturan Wajib
 1. TypeScript strict; dilarang `any` tanpa komentar alasan.
 2. **Uang selalu integer.** Dilarang float/desimal untuk nominal. Format hanya lewat `lib/money.ts`.
-3. **Dilarang memakai AI/LLM** dalam bentuk apa pun (SDK, API model, layanan "AI OCR", prompt) untuk ekstraksi maupun fitur lain. Ekstraksi = Tesseract.js + parser aturan sesuai `EXTRACTION.md`.
-4. **Gambar tidak boleh disimpan atau diunggah** di mana pun: bukan Storage, bukan database, bukan server, bukan log. OCR berjalan di browser; gambar dan teks OCR (`raw_text`) tidak boleh dikirim ke server. Jangan menambahkan field `receipt_path` atau fitur arsip gambar.
+3. **Mode Ekstraksi Dual (OCR vs Gemini):**
+   - Jika `EXTRACTION_MODE=ocr`: ekstraksi wajib memakai Tesseract.js + parser aturan tanpa AI.
+   - Jika `EXTRACTION_MODE=gemini`: ekstraksi dapat memanggil Google Gemini API (`GEMINI_API_KEY`) di server untuk menghasilkan JSON terstruktur (`name`, `amount`, `expense_date`, `category_suggestion`).
+4. **Gambar tidak boleh disimpan permanen:** Dilarang menyimpan file gambar di Storage, database, atau disk server secara permanen. Gambar hanya diproses sementara di memori untuk keperluan ekstraksi. Jangan menambahkan field `receipt_path` atau fitur arsip gambar permanen.
 5. Aset OCR (worker, WASM, data bahasa) di-host sendiri di `public/tesseract/`; jangan memuat dari CDN pihak ketiga. Modul OCR di-import dinamis, bukan di bundle utama.
 6. **Parser = fungsi murni** (tanpa I/O, tanpa state global). Setiap aturan baru wajib disertai unit test; setiap bug ekstraksi diperbaiki dengan fixture teks OCR (dianonimkan) yang gagal lebih dulu. Jangan commit gambar struk berisi data pribadi.
 7. Firebase Admin SDK, `FIREBASE_PRIVATE_KEY`, dan `TELEGRAM_ENCRYPTION_KEY` **hanya di server**; tidak boleh diimpor ke komponen klien atau di-commit. Firebase di klien hanya untuk Auth.
