@@ -23,7 +23,22 @@ async function main() {
     console.log(`========================================`);
 
     const imageBuffer = fs.readFileSync(filePath);
-    const { data } = await worker.recognize(imageBuffer);
+    let processedBuffer = imageBuffer;
+    try {
+      const sharp = (await import("sharp")).default;
+      const meta = await sharp(imageBuffer).metadata();
+      const targetWidth = Math.max(meta.width || 0, 2000);
+      processedBuffer = await sharp(imageBuffer)
+        .trim()
+        .resize({ width: targetWidth, withoutEnlargement: false })
+        .grayscale()
+        .normalize()
+        .toBuffer();
+    } catch {
+      // fallback
+    }
+
+    const { data } = await worker.recognize(processedBuffer);
 
     console.log(`--- RAW OCR TEXT ---`);
     console.log(data.text);

@@ -165,6 +165,14 @@ const GENERIC_KEYWORDS = [
   "WAKTU PEMESANAN",
   "WAKTU PEMBAYARAN",
   "KONVERSI TRANSAKSI",
+  "ITEM DESCRIPTION",
+  "ITEM DESERIPTION",
+  "DELIVERY DETAILS",
+  "ORDER RECEIPT",
+  "ORDER DETAILS",
+  "SOLD BY",
+  "APPLICATION SERVICE FEE",
+  "SHIPPING COUPONS",
 ];
 
 const CELLULAR_PROVIDERS: { pattern: RegExp; name: string }[] = [
@@ -191,11 +199,25 @@ function cleanRecipientCandidate(raw: string): string {
 }
 
 function cleanProductCandidate(raw: string): string {
-  let cleaned = raw.replace(/^[®@©\*\-><~•|#_:\(\)\[\]\{\}\s/]+/, "").trim();
+  // Strip leading decoration/bullet noise: e.g. "@", "©", "*", "-", ">", "<", "•", "|", "#", "_", ":", "/"
+  let cleaned = raw.replace(/^[®@©\*\-><~•|#_:\/]+/, "").trim();
+  // Strip leading digit + symbol artifact e.g. "4 & Telur Ayam" -> "Telur Ayam"
+  cleaned = cleaned.replace(/^\d+\s*[®@©\*\-><~•|#_:\/&]+\s+(?=[a-zA-Z]{3,})/i, "").trim();
+  // Normalize mismatched closing bracket first e.g. [xxx) -> [xxx] or (BUY 1 GET 1)
+  cleaned = cleaned.replace(/\[([^\]\(\)]+)\)/g, "[$1]");
+  cleaned = cleaned.replace(/^\((BUY\s+1\s+GET\s+1)\)/i, "[$1]");
+  // Strip leading unclosed bracket noise like "[34 p " (no closing bracket within 25 chars)
+  cleaned = cleaned.replace(/^\[(?![^\]]{3,25}\])[\da-z\s*&•~-]{1,6}\s+(?=[a-zA-Z]{3,})/i, "").trim();
   // Strip leading 1-2 letter thumbnail noise (e.g. "Ea Telur Ayam" -> "Telur Ayam")
   cleaned = cleaned
     .replace(/^(?!(?:ES|MI|PT|CV|UD)\b)[a-z]{1,2}\s+(?=[a-zA-Z]{2,})/i, "")
     .trim();
+  // Strip trailing quantity column artifact e.g. " [FLASH SALE] 1", " ... |", " ... l"
+  cleaned = cleaned.replace(/\s+[|/\dliI]+$/, "").trim();
+  // Fix OCR glitches in common tags e.g. "BUY | GET" -> "BUY 1 GET"
+  cleaned = cleaned.replace(/\bBUY\s+[|lI]\s+GET\b/i, "BUY 1 GET");
+  cleaned = cleaned.replace(/\[FLASH SAL[IE][^\]]*$/i, "[FLASH SALE]");
+  cleaned = cleaned.replace(/\(FLASH SAL[IE][^\]]*$/i, "[FLASH SALE]");
   return cleaned;
 }
 
@@ -269,16 +291,57 @@ export function extractName(
     }
   }
 
-  // Strategy 0.5: Marketplace / E-commerce Order Detail (Shopee, Tokopedia, etc.)
+  // Strategy 0.5: Marketplace / E-commerce Order Detail (Shopee, Tokopedia, TikTok Shop, etc.)
   const hasMarketplaceContext =
-    (/\b(?:ALAMAT\s*PENGIRIMAN|HUBUNGI\s*PENJUAL|TOTAL\s*PESANAN|BATALKAN\s*PESANAN)\b/i.test(
+    (/\b(?:ALAMAT\s*PENGIRIMAN|HUBUNGI\s*PENJUAL|TOTAL\s*PESANAN|BATALKAN\s*PESANAN|DELIVERY\s*DETAILS|ORDER\s*RECEIPT|TIKTOK\s*SHOP|TOKOPEDIA|ITEM\s*DESC)\b/i.test(
       fullText
     ) ||
-      (/\b(?:RINCIAN\s*PESANAN|DETAIL\s*PESANAN)\b/i.test(fullText) &&
-        /\b(?:PENGIRIMAN|KURIR|ONGKIR|LACAK|PENJUAL)\b/i.test(fullText))) &&
+      (/\b(?:RINCIAN\s*PESANAN|DETAIL\s*PESANAN|ORDER\s*DETAILS?)\b/i.test(fullText) &&
+        /\b(?:PENGIRIMAN|KURIR|ONGKIR|LACAK|PENJUAL|DELIVERY|SOLD\s*BY)\b/i.test(fullText))) &&
     !/\b(?:DINE-IN|DINE\s*IN|TAKE\s*AWAY|TAKEAWAY|MEJA|PB1)\b/i.test(fullText);
 
   if (hasMarketplaceContext) {
+    // 0.5a. Table with Item Description Header
+    const ITEM_DESCRIPTION_HEADERS = [
+      "ITEM DESCRIPTION",
+      "ITEM DESERIPTION",
+      "DESKRIPSI BARANG",
+      "DESKRIPSI PRODUK",
+      "NAMA BARANG",
+      "NAMA PRODUK",
+      "RINCIAN BARANG",
+      "RINCIAN PRODUK",
+    ];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+      const upper = line.upper;
+
+      if (ITEM_DESCRIPTION_HEADERS.some((hdr) => upper.includes(hdr))) {
+        let nextIdx = i + 1;
+        while (nextIdx < lines.length && !lines[nextIdx]?.normalized.trim()) {
+          nextIdx++;
+        }
+        if (nextIdx < lines.length) {
+          const rawItem = lines[nextIdx]?.normalized || "";
+          const cleaned = cleanProductCandidate(rawItem);
+          if (
+            cleaned.length >= 3 &&
+            !GENERIC_KEYWORDS.some((kw) => cleaned.toUpperCase().includes(kw)) &&
+            !ADDRESS_PHONE_REGEX.test(cleaned)
+          ) {
+            return {
+              value: toTitleCase(cleaned).slice(0, 60),
+              confidence: 0.95,
+              rule: "item_description_header",
+            };
+          }
+        }
+      }
+    }
+
+    // 0.5b. Line followed immediately by quantity or unit price
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (!line) continue;
@@ -444,7 +507,7 @@ export function extractName(
 export function toTitleCase(str: string): string {
   return str
     .toLowerCase()
-    .replace(/(?:^|\s|\/|-)\S/g, (char) => char.toUpperCase())
+    .replace(/(?:^|[\s\/\-\[\(])([a-z])/gi, (match, letter) => match.slice(0, -1) + letter.toUpperCase())
     .replace(/\bKe\b/g, "ke")
     .replace(/\bDi\b/g, "di")
     .replace(/\bDari\b/g, "dari")

@@ -10,6 +10,10 @@ const IGNORE_DATE_KEYWORDS = [
 ];
 
 const PAYMENT_DATE_LABELS = [
+  "RECEIPT DATE",
+  "TANGGAL RESI",
+  "TANGGAL STRUK",
+  "TANGGAL KWITANSI",
   "PAYMENT TIME",
   "WAKTU PEMBAYARAN",
   "TANGGAL PEMBAYARAN",
@@ -30,6 +34,7 @@ const GENERAL_DATE_LABELS = [
   "WAKTU DIBUAT",
   "WAKTU PEMESANAN",
   "ORDER TIME",
+  "ORDER DATE",
   "TANGGAL",
   "TGL",
   "DATE",
@@ -111,21 +116,40 @@ export function extractDate(
     const hasLabel = isPayment || isTransaction || isGeneral;
     const hasTime = /\b\d{1,2}:\d{2}(?::\d{2})?\b/.test(upper);
 
-    // 1. Check Named Month: "8 Okt 2026", "08 OCT 2026", "8 Agustus 2026", "08-Oct-2026"
+    // 1. Check Named Month
+    // Format A: "8 Okt 2026", "08 OCT 2026", "8 Agustus 2026", "08-Oct-2026"
+    // Format B: "October 16, 2026", "Oct 16 2026"
     const monthNamesPattern = Object.keys(MONTH_MAP).join("|");
-    const namedRegex = new RegExp(
+    const namedDayFirstRegex = new RegExp(
       `\\b(\\d{1,2})[\\s\\-\\./]+(${monthNamesPattern})[\\s\\-\\./]+(\\d{2,4})\\b`,
       "i"
     );
-    const namedMatch = line.normalized.match(namedRegex);
-    if (namedMatch && namedMatch[1] && namedMatch[2] && namedMatch[3]) {
-      const d = parseInt(namedMatch[1], 10);
-      const mName = namedMatch[2].toUpperCase();
-      const m = MONTH_MAP[mName];
-      let y = parseInt(namedMatch[3], 10);
-      if (y < 100) y += 2000;
+    const namedMonthFirstRegex = new RegExp(
+      `\\b(${monthNamesPattern})[\\s\\-\\./]+(\\d{1,2})(?:st|nd|rd|th)?,?[\\s\\-\\./]+(\\d{2,4})\\b`,
+      "i"
+    );
 
-      if (m && isValidDate(y, m, d)) {
+    let d: number | null = null;
+    let m: number | null = null;
+    let y: number | null = null;
+
+    const dayFirstMatch = line.normalized.match(namedDayFirstRegex);
+    if (dayFirstMatch && dayFirstMatch[1] && dayFirstMatch[2] && dayFirstMatch[3]) {
+      d = parseInt(dayFirstMatch[1], 10);
+      m = MONTH_MAP[dayFirstMatch[2].toUpperCase()] || null;
+      y = parseInt(dayFirstMatch[3], 10);
+    } else {
+      const monthFirstMatch = line.normalized.match(namedMonthFirstRegex);
+      if (monthFirstMatch && monthFirstMatch[1] && monthFirstMatch[2] && monthFirstMatch[3]) {
+        m = MONTH_MAP[monthFirstMatch[1].toUpperCase()] || null;
+        d = parseInt(monthFirstMatch[2], 10);
+        y = parseInt(monthFirstMatch[3], 10);
+      }
+    }
+
+    if (d && m && y) {
+      if (y < 100) y += 2000;
+      if (isValidDate(y, m, d)) {
         const parsedDate = new Date(Date.UTC(y, m - 1, d));
         if (parsedDate <= tomorrow) {
           const dateStr = formatDateIso(y, m, d);

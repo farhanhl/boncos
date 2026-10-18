@@ -145,7 +145,22 @@ export async function POST(request: Request) {
         cachePath: path.resolve(process.cwd(), "public/tesseract"),
       });
 
-      const { data } = await worker.recognize(imageBuffer);
+      let processedBuffer = imageBuffer;
+      try {
+        const sharp = (await import("sharp")).default;
+        const meta = await sharp(imageBuffer).metadata();
+        const targetWidth = Math.max(meta.width || 0, 2000);
+        processedBuffer = await sharp(imageBuffer)
+          .trim()
+          .resize({ width: targetWidth, withoutEnlargement: false })
+          .grayscale()
+          .normalize()
+          .toBuffer();
+      } catch {
+        // Fallback to original imageBuffer
+      }
+
+      const { data } = await worker.recognize(processedBuffer);
       ocrText = data.text || "";
       ocrConfidence = typeof data.confidence === "number" ? data.confidence / 100 : 0.8;
       await worker.terminate();

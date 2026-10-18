@@ -444,5 +444,40 @@ Batalkan Pesanan Hubungi Penjual
       expect(parsed.status).toBe("ok");
       expect(parsed.extraction_confidence).toBeGreaterThanOrEqual(0.85);
     });
+
+    it("correctly extracts TikTok Shop / Tokopedia order receipt with item description, receipt date, and grand total", () => {
+      const rawTikTokShop = `
+Shop | tokopedia Order Receipt
+Receipt Number : 20261016-586596XXXXXXXXXXXX
+Receipt Date : October 16, 2026 13:30
+Delivery Details Sold By Order Details
+Jane Doe Daily Care by Unilever Order Number 586596XXXXXXXXXXXX
+Order Date October 15, 2026 07:46
+Jl. Mawar No. 10 Rt.01/Rw.02, KOTA JAKARTA
+Indonesia
+Item Description Quantity
+[BUY 1 GET 1] Rexona Men APA Ice Cool 40g [FLASH SALE] 1
+Subtotal Rp34.200
+Application service fee Rp1.600
+Shipping Rp7.500
+Coupons - Rp13.680
+TikTok Shop shipping coupons - Rp7.500
+Grand total (includes VAT) Rp22.120
+Any applicable company fees include VAT at the applicable rate
+TOKOPEDIA
+Tax ID: 0210893970035000
+This receipt serves as proof of purchase. Thank you for your purchase.
+      `.trim();
+
+      const parsed = parseReceiptText(rawTikTokShop);
+      expect(parsed.doc_type).toBe("receipt");
+      expect(parsed.name.value).toBe("[Buy 1 Get 1] Rexona Men Apa Ice Cool 40g [Flash Sale]");
+      expect(parsed.name.rule).toBe("item_description_header");
+      expect(parsed.amount.value).toBe(22120);
+      expect(parsed.expense_date.value).toBe("2026-10-16");
+      expect(parsed.category_suggestion.value).toBe("shopping");
+      expect(parsed.status).toBe("ok");
+      expect(parsed.extraction_confidence).toBeGreaterThanOrEqual(0.9);
+    });
   });
 });
