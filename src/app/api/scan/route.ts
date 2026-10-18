@@ -238,8 +238,8 @@ export async function POST(request: Request) {
     }
 
     // 4. Validasi Dokumen Pengeluaran
-    const isGeminiMode = parsed.name.rule === "gemini_ai";
-    if (!isGeminiMode) {
+    const isAiMode = parsed.name.rule === "ai" || parsed.name.rule === "gemini_ai";
+    if (!isAiMode) {
       const lines = normalizeOcrText(ocrText);
       const isValidExpense = isExpenseDocument(lines, parsed.doc_type, parsed);
 
@@ -315,8 +315,8 @@ export async function POST(request: Request) {
     const categoryId = parsed.category_suggestion.value || "other";
 
     const docRef = userCol(uid, "expenses").doc();
-    const note = isGeminiMode
-      ? `Auto-scan via Gemini AI (${parsed.doc_type})`
+    const note = isAiMode
+      ? `Auto-scan via AI (${parsed.doc_type})`
       : `Auto-scan via Webhook (${parsed.doc_type})`;
 
     const expenseData = {
@@ -329,6 +329,7 @@ export async function POST(request: Request) {
       category_id: categoryId,
       note,
       source: "scan",
+      scan_method: isAiMode ? "ai" : "ocr",
       extraction_confidence: parsed.extraction_confidence,
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
@@ -339,6 +340,7 @@ export async function POST(request: Request) {
     // 6. Notifikasi Telegram Sukses (jika user mengaitkan telegram)
     await sendTelegramScanResult(uid, {
       success: true,
+      method: isAiMode ? "ai" : "ocr",
       expense: {
         name,
         amount: amountVal,
@@ -346,6 +348,8 @@ export async function POST(request: Request) {
         category_id: categoryId,
       },
     });
+
+
 
         return NextResponse.json({
           ok: true,

@@ -115,6 +115,10 @@ export function ReviewForm({
         category_id: categoryId,
         note: note.trim() || null,
         source: "scan",
+        scan_method:
+          extraction.name.rule === "ai" || extraction.name.rule === "gemini_ai"
+            ? "ai"
+            : "ocr",
         extraction_confidence: extraction.extraction_confidence,
       });
 

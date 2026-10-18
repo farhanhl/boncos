@@ -118,6 +118,7 @@ export function ExpenseForm({
           category_id: categoryId,
           note: note.trim() || null,
           source: sourceDefault,
+          scan_method: sourceDefault === "scan" ? "ocr" : "manual",
           extraction_confidence: extractionConfidence,
         });
 

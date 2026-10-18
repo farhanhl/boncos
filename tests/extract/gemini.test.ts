@@ -33,6 +33,12 @@ describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
       expect(isGeminiExtractionEnabled()).toBe(false);
     });
 
+    it("returns true when EXTRACTION_MODE is ai and GEMINI_API_KEY is present", () => {
+      process.env.EXTRACTION_MODE = "ai";
+      process.env.GEMINI_API_KEY = "dummy-api-key";
+      expect(isGeminiExtractionEnabled()).toBe(true);
+    });
+
     it("returns true when EXTRACTION_MODE is gemini and GEMINI_API_KEY is present", () => {
       process.env.EXTRACTION_MODE = "gemini";
       process.env.GEMINI_API_KEY = "dummy-api-key";
@@ -49,7 +55,7 @@ describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
 
     it("parses successful Gemini JSON response into ExtractionResult", async () => {
       process.env.GEMINI_API_KEY = "dummy-key";
-      process.env.GEMINI_MODEL = "gemini-2.5-flash";
+      process.env.AI_MODEL = "gemini-2.5-flash";
 
       const mockGeminiJson = {
         name: "[Buy 1 Get 1] Rexona Men Apa Ice Cool 40g [Flash Sale]",
@@ -83,9 +89,10 @@ describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
       expect(result.expense_date.value).toBe("2026-10-16");
       expect(result.category_suggestion.value).toBe("shopping");
       expect(result.doc_type).toBe("receipt");
-      expect(result.name.rule).toBe("gemini_ai");
+      expect(result.name.rule).toBe("ai");
       expect(result.extraction_confidence).toBeGreaterThan(0.9);
     });
+
 
     it("handles partial extraction from Gemini gracefully", async () => {
       process.env.GEMINI_API_KEY = "dummy-key";

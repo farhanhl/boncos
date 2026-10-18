@@ -48,6 +48,7 @@ export async function createExpense(
       category_id,
       note,
       source,
+      scan_method,
       extraction_confidence,
     } = parsed.data;
 
@@ -56,6 +57,8 @@ export async function createExpense(
 
     const expensesRef = userCol(user.uid, "expenses");
     const docRef = expensesRef.doc();
+
+    const method = scan_method || (source === "manual" ? "manual" : "ocr");
 
     const expenseData = {
       name,
@@ -67,6 +70,7 @@ export async function createExpense(
       category_id: category_id || null,
       note: note || null,
       source,
+      scan_method: method,
       extraction_confidence: source === "scan" ? extraction_confidence ?? null : null,
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
@@ -84,11 +88,13 @@ export async function createExpense(
           expense_date,
           category_id: category_id || null,
           source,
+          method,
         });
       } catch {
         // Best effort: never throws or fails createExpense
       }
     });
+
 
     revalidatePath("/expenses");
     revalidatePath("/dashboard");

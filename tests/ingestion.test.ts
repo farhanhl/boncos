@@ -15,4 +15,35 @@ describe("Webhook Scan & Ingestion Unit Tests", () => {
     expect(await getUidByIngestionKey(null)).toBeNull();
     expect(await getUidByIngestionKey("   ")).toBeNull();
   });
+
+  it("validates scan_method in createExpenseSchema", async () => {
+    const { createExpenseSchema } = await import("@/types/expense");
+    const validOcr = createExpenseSchema.safeParse({
+      name: "Belanja",
+      amount: 10000,
+      expense_date: "2026-10-18",
+      source: "scan",
+      scan_method: "ocr",
+    });
+    expect(validOcr.success).toBe(true);
+
+    const validAi = createExpenseSchema.safeParse({
+      name: "Belanja",
+      amount: 10000,
+      expense_date: "2026-10-18",
+      source: "scan",
+      scan_method: "ai",
+    });
+    expect(validAi.success).toBe(true);
+
+    const validManual = createExpenseSchema.safeParse({
+      name: "Belanja",
+      amount: 10000,
+      expense_date: "2026-10-18",
+      source: "manual",
+      scan_method: "manual",
+    });
+    expect(validManual.success).toBe(true);
+  });
 });
+

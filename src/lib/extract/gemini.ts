@@ -30,13 +30,16 @@ const VALID_DOC_TYPES: DocumentType[] = [
 ];
 
 /**
- * Checks if Gemini extraction mode is active and properly configured.
+ * Checks if AI extraction mode is active and properly configured.
+ * Supports EXTRACTION_MODE=ai or EXTRACTION_MODE=gemini.
  */
-export function isGeminiExtractionEnabled(): boolean {
+export function isAiExtractionEnabled(): boolean {
   const mode = (process.env.EXTRACTION_MODE || "").toLowerCase().trim();
   const apiKey = (process.env.GEMINI_API_KEY || "").trim();
-  return mode === "gemini" && apiKey.length > 0;
+  return (mode === "ai" || mode === "gemini") && apiKey.length > 0;
 }
+
+export const isGeminiExtractionEnabled = isAiExtractionEnabled;
 
 /**
  * Extracts receipt information from an image buffer using Google Gemini API.
@@ -50,7 +53,7 @@ export async function extractReceiptWithGemini(
     throw new Error("GEMINI_API_KEY belum dikonfigurasi di environment variable.");
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.AI_MODEL || "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const base64Image = imageBuffer.toString("base64");
@@ -176,26 +179,27 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
     name: {
       value: nameVal,
       confidence: nameVal ? confidence : 0,
-      rule: "gemini_ai",
+      rule: "ai",
     },
     amount: {
       value: amountVal,
       confidence: amountVal ? confidence : 0,
-      rule: "gemini_ai",
+      rule: "ai",
     },
     expense_date: {
       value: expenseDateVal,
       confidence: expenseDateVal ? confidence : 0,
-      rule: "gemini_ai",
+      rule: "ai",
     },
     category_suggestion: {
       value: categorySuggestionVal,
       confidence: 0.9,
-      rule: "gemini_ai",
+      rule: "ai",
     },
     extraction_confidence: compositeConfidence,
     ocr_confidence: 0.98,
     warnings: [],
-    raw_text: parsedData.summary || `[Gemini AI Extraction] ${nameVal || ""} - ${amountVal || ""}`,
+    raw_text: parsedData.summary || `[AI Extraction] ${nameVal || ""} - ${amountVal || ""}`,
   };
+
 }

@@ -32,10 +32,12 @@ export function UploadDropzone({
 
       try {
         let result: ExtractionResult;
-        const isGeminiMode = process.env.NEXT_PUBLIC_EXTRACTION_MODE === "gemini";
+        const isAiMode =
+          process.env.NEXT_PUBLIC_EXTRACTION_MODE === "ai" ||
+          process.env.NEXT_PUBLIC_EXTRACTION_MODE === "gemini";
 
-        if (isGeminiMode) {
-          setStatusText("Menganalisis struk dengan Gemini AI...");
+        if (isAiMode) {
+          setStatusText("Menganalisis struk dengan AI...");
           const formData = new FormData();
           formData.append("image", file);
           const aiRes = await extractReceiptAction(formData);

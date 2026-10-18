@@ -13,6 +13,7 @@ export interface ExpenseNotificationData {
   expense_date: string;
   category_id: string | null;
   source: "manual" | "scan";
+  method?: "manual" | "ocr" | "ai" | null;
 }
 
 export interface TelegramSettingsDoc {
@@ -214,7 +215,13 @@ export async function sendTelegramNotificationForExpense(
         // Fallback to categoryInfo
       }
     }
-    const sourceLabel = data.source === "scan" ? "Scan struk" : "Manual";
+
+    let sourceLabel = "Manual";
+    if (data.method === "ai") {
+      sourceLabel = "AI";
+    } else if (data.method === "ocr" || data.source === "scan") {
+      sourceLabel = "OCR";
+    }
 
     const messageHtml = [
       "💸 <b>Pengeluaran baru</b>",
@@ -235,6 +242,7 @@ export interface ScanNotificationOptions {
   success: boolean;
   errorReason?: string;
   imageUrl?: string | null;
+  method?: "ocr" | "ai";
   expense?: {
     name: string;
     amount: number;
@@ -284,13 +292,14 @@ export async function sendTelegramScanResult(
           // Fallback
         }
       }
+      const sourceLabel = options.method === "ai" ? "AI" : "OCR";
       messageHtml = [
         "🧾 <b>Pencatatan Struk Berhasil!</b>",
         `Nama: <b>${escapeHtml(options.expense.name)}</b>`,
         `Nominal: <b>${escapeHtml(formatRupiah(options.expense.amount))}</b>`,
         `Tanggal: ${escapeHtml(formatDate(options.expense.expense_date))}`,
         `Kategori: ${escapeHtml(categoryInfo.name)}`,
-        `Metode: <i>Webhook Scan Otomatis</i>`,
+        `Sumber: <b>${sourceLabel}</b>`,
       ].join("\n");
     } else {
       const lines = [
