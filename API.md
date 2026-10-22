@@ -17,7 +17,7 @@ Semua endpoint (kecuali `/api/auth/session`) memerlukan session cookie valid. `u
 | `updateExpense` | `{ id, ...fields }` | Hanya dokumen di bawah `users/{uid}` |
 | `deleteExpense` | `{ id }` | Hapus dokumen |
 | `listExpenses` | `{ from?, to?, category_id?, q?, cursor?, limit? }` | Pagination `startAfter`; `q` = prefix search nama |
-| `getDashboardSummary` | `{ month: 'YYYY-MM' }` | Total (aggregation `sum`), bulan lalu, breakdown kategori |
+| `getDashboardSummary` | `{ month: 'YYYY-MM' }` | Total (aggregation `sum`), bulan lalu, breakdown kategori, hari pengeluaran terbesar (`peakSpendingDay`) |
 | `createCategory` / `updateCategory` / `deleteCategory` | | Hanya kategori custom |
 | `getTelegramSettings` | — | Mengembalikan `{ enabled, chat_id, bot_token_hint }`, **tanpa token** |
 | `saveTelegramSettings` | `{ enabled, chat_id, bot_token? }` | `bot_token` opsional saat update (kosong = pertahankan token lama). Validasi `chat_id` (`/^-?\d+$/` atau `/^@[A-Za-z0-9_]{5,}$/`) dan token via `getMe`; enkripsi sebelum simpan |

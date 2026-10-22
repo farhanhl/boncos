@@ -1,5 +1,6 @@
 import { getDashboardSummary } from "@/actions/dashboard";
 import { HeroNota } from "@/components/dashboard/HeroNota";
+import { PeakSpendingDayCard } from "@/components/dashboard/PeakSpendingDayCard";
 import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard";
 import { CategoryBreakdownChart } from "@/components/dashboard/CategoryBreakdownChart";
 import { RecentExpensesList } from "@/components/dashboard/RecentExpensesList";
@@ -47,13 +48,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       {/* Main Grid: Desktop 5/12 Left, 7/12 Right (DESIGN.md Section 6) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Kolom Kiri: Nota Hero (lg:col-span-5) */}
-        <div className="lg:col-span-5">
+        {/* Kolom Kiri: Nota Hero + Hari Pengeluaran Terbesar (lg:col-span-5 space-y-6) */}
+        <div className="lg:col-span-5 space-y-6">
           <HeroNota
             topExpenses={topExpenses}
             total={currentTotal}
             diffAmount={diffAmount}
             diffType={diffType}
+            month={activeMonth}
+          />
+          <PeakSpendingDayCard
+            peakDay={data?.peakSpendingDay}
+            monthTotal={currentTotal}
             month={activeMonth}
           />
         </div>

@@ -3,7 +3,13 @@
 import { getCurrentUser } from "@/lib/firebase/session";
 import { userCol } from "@/lib/firebase/admin";
 import { getCategoryById } from "@/lib/categories";
+import {
+  calculatePeakSpendingDay,
+  type PeakSpendingDay,
+} from "@/lib/dashboard-stats";
 import type { ExpenseRecord } from "@/types/expense";
+
+export type { PeakSpendingDay };
 
 export interface CategorySummaryItem {
   categoryId: string;
@@ -23,6 +29,7 @@ export interface DashboardSummaryData {
   recentExpenses: ExpenseRecord[];
   categoryBreakdown: CategorySummaryItem[];
   monthlyBudget: number;
+  peakSpendingDay: PeakSpendingDay | null;
 }
 
 export async function getDashboardSummary(
@@ -158,6 +165,7 @@ export async function getDashboardSummary(
 
     const diff = currentMonthTotal - lastMonthTotal;
     const diffType = diff > 0 ? "boncos" : diff < 0 ? "hemat" : "same";
+    const peakSpendingDay = calculatePeakSpendingDay(thisMonthExpenses);
 
     return {
       ok: true,
@@ -171,6 +179,7 @@ export async function getDashboardSummary(
         recentExpenses,
         categoryBreakdown,
         monthlyBudget,
+        peakSpendingDay,
       },
     };
   } catch (err) {

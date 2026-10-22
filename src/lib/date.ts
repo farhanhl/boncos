@@ -54,3 +54,102 @@ export function toIsoDateString(d: Date): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+const INDONESIAN_DAYS = [
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+];
+
+const INDONESIAN_MONTHS_LONG = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
+const INDONESIAN_MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Agu",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+];
+
+export interface FormatDateIndonesianOptions {
+  withDay?: boolean;
+  monthFormat?: "short" | "long";
+}
+
+/**
+ * Formats a date into human-readable Indonesian representation.
+ * Example: '2026-10-15' -> 'Kamis, 15 Oktober 2026' or 'Kamis, 15 Okt 2026'
+ */
+export function formatDateIndonesian(
+  date: string | Date | null | undefined,
+  options: FormatDateIndonesianOptions = { withDay: true, monthFormat: "long" }
+): string {
+  if (!date) return "";
+
+  let y: number;
+  let m: number;
+  let d: number;
+  let dayOfWeek: number;
+
+  if (typeof date === "string") {
+    const isoMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      y = parseInt(isoMatch[1], 10);
+      m = parseInt(isoMatch[2], 10) - 1;
+      d = parseInt(isoMatch[3], 10);
+      const utcDate = new Date(Date.UTC(y, m, d));
+      dayOfWeek = utcDate.getUTCDay();
+    } else {
+      const parsed = new Date(date);
+      if (isNaN(parsed.getTime())) return date;
+      y = parsed.getFullYear();
+      m = parsed.getMonth();
+      d = parsed.getDate();
+      dayOfWeek = parsed.getDay();
+    }
+  } else if (date instanceof Date && !isNaN(date.getTime())) {
+    y = date.getFullYear();
+    m = date.getMonth();
+    d = date.getDate();
+    dayOfWeek = date.getDay();
+  } else {
+    return "";
+  }
+
+  const monthName =
+    options.monthFormat === "short"
+      ? INDONESIAN_MONTHS_SHORT[m] || ""
+      : INDONESIAN_MONTHS_LONG[m] || "";
+
+  const dayName = INDONESIAN_DAYS[dayOfWeek] || "";
+
+  if (options.withDay && dayName) {
+    return `${dayName}, ${d} ${monthName} ${y}`;
+  }
+
+  return `${d} ${monthName} ${y}`;
+}
