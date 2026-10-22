@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DEFAULT_CATEGORY_LIST } from "@/lib/categories";
 import { formatRupiah, parseRupiahInput } from "@/lib/money";
-import { formatDate } from "@/lib/date";
+import { formatDate, formatTime } from "@/lib/date";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { createExpense, updateExpense, deleteExpense } from "@/actions/expenses";
+import { listCustomCategories, type CustomCategoryRecord } from "@/actions/categories";
 import type { ExpenseRecord } from "@/types/expense";
 
 interface ExpenseFormProps {
   initialData?: ExpenseRecord;
+  customCategories?: CustomCategoryRecord[];
   sourceDefault?: "manual" | "scan";
   extractionConfidence?: number | null;
   onSuccess?: (id: string) => void;
@@ -18,11 +20,30 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({
   initialData,
+  customCategories,
   sourceDefault = "manual",
   extractionConfidence = null,
   onSuccess,
 }: ExpenseFormProps) {
   const router = useRouter();
+
+  const [fetchedCategories, setFetchedCategories] = useState<CustomCategoryRecord[]>([]);
+
+  useEffect(() => {
+    if (!customCategories) {
+      let isMounted = true;
+      listCustomCategories().then((res) => {
+        if (isMounted && res.ok && res.data) {
+          setFetchedCategories(res.data);
+        }
+      });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [customCategories]);
+
+  const customCats = customCategories || fetchedCategories;
 
   const [name, setName] = useState(initialData?.name || "");
   const [amountStr, setAmountStr] = useState(
@@ -97,6 +118,7 @@ export function ExpenseForm({
           category_id: categoryId,
           note: note.trim() || null,
           source: sourceDefault,
+          scan_method: sourceDefault === "scan" ? "ocr" : "manual",
           extraction_confidence: extractionConfidence,
         });
 
@@ -151,9 +173,15 @@ export function ExpenseForm({
         </div>
       )}
 
-      <h2 className="font-display text-2xl text-tinta mb-4">
+      <h2 className="font-display text-2xl text-tinta mb-1">
         {initialData ? "Ubah Pengeluaran" : "Catat Pengeluaran"}
       </h2>
+      {initialData?.created_at && (
+        <p className="text-xs text-tinta-pudar mb-4 font-medium" suppressHydrationWarning>
+          Diinput pada: {formatDate(initialData.created_at)} • {formatTime(initialData.created_at)}
+        </p>
+      )}
+      {!initialData?.created_at && <div className="mb-4" />}
 
       {errorMessage && (
         <div className="mb-4 p-3 bg-stempel/10 border-2 border-stempel rounded-md text-stempel text-sm font-semibold">
@@ -237,11 +265,22 @@ export function ExpenseForm({
             onChange={(e) => setCategoryId(e.target.value)}
             className="bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] w-full text-base cursor-pointer"
           >
-            {DEFAULT_CATEGORY_LIST.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
+            <optgroup label="Kategori Bawaan">
+              {DEFAULT_CATEGORY_LIST.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </optgroup>
+            {customCats.length > 0 && (
+              <optgroup label="Kategori Kustom">
+                {customCats.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
 

@@ -72,6 +72,7 @@ const GENERIC_KEYWORDS = [
   "GET REWARD",
   "TRANSACTION STATUS",
   "METODE PEMBAYARAN",
+  "QRIS",
   "AMBIL PESANAN",
   "REPUBLIK INDONESIA",
   "KARTU TANDA PENDUDUK",
@@ -130,6 +131,57 @@ const GENERIC_KEYWORDS = [
   "BENEFICIARY",
   "BENEFICIARY NAME",
   "NAMA MERCHANT",
+  "COMPLETED",
+  "ORDER DETAILS",
+  "ORDER DETAIL",
+  "THANK YOU FOR PURCHASING",
+  "PURCHASING DIGITAL PRODUCTS",
+  "DIGITAL PRODUCTS",
+  "PRODUK DIGITAL",
+  "BUY AGAIN",
+  "BELI LAGI",
+  "PAYMENT INFO",
+  "INFO PEMBAYARAN",
+  "SERIAL NUMBER",
+  "NOMOR SERIAL",
+  "ORDER ID",
+  "NO. PESANAN",
+  "NOMOR PESANAN",
+  "PHONE NUMBER",
+  "NOMOR TELEPON",
+  "NOMOR HP",
+  "NO. HP",
+  "NO HP",
+  "ALAMAT PENGIRIMAN",
+  "ALAMAT PENERIMA",
+  "HUBUNGI PENJUAL",
+  "CUSTOMER SERVICE",
+  "CUSTOMER SERVICE PRIORITAS",
+  "BATALKAN PESANAN",
+  "LIHAT LEBIH SEDIKIT",
+  "BUTUH BANTUAN",
+  "DENGAN VIP",
+  "KAMU SUDAH HEMAT",
+  "WAKTU PEMESANAN",
+  "WAKTU PEMBAYARAN",
+  "KONVERSI TRANSAKSI",
+  "ITEM DESCRIPTION",
+  "ITEM DESERIPTION",
+  "DELIVERY DETAILS",
+  "ORDER RECEIPT",
+  "ORDER DETAILS",
+  "SOLD BY",
+  "APPLICATION SERVICE FEE",
+  "SHIPPING COUPONS",
+];
+
+const CELLULAR_PROVIDERS: { pattern: RegExp; name: string }[] = [
+  { pattern: /\b(?:THREE|TRI)\b/i, name: "Three" },
+  { pattern: /\b(?:TELKOMSEL|SIMPATI|KARTU\s*AS|BY\.?U)\b/i, name: "Telkomsel" },
+  { pattern: /\b(?:INDOSAT|IM3|OOREDOO)\b/i, name: "Indosat" },
+  { pattern: /\b(?:XL\s*AXIATA|\bXL\b)\b/i, name: "XL" },
+  { pattern: /\b(?:AXIS)\b/i, name: "Axis" },
+  { pattern: /\b(?:SMARTFREN)\b/i, name: "Smartfren" },
 ];
 
 function cleanRecipientCandidate(raw: string): string {
@@ -146,10 +198,185 @@ function cleanRecipientCandidate(raw: string): string {
   return cleaned;
 }
 
+function cleanProductCandidate(raw: string): string {
+  // Strip leading decoration/bullet noise: e.g. "@", "©", "*", "-", ">", "<", "•", "|", "#", "_", ":", "/"
+  let cleaned = raw.replace(/^[®@©\*\-><~•|#_:\/]+/, "").trim();
+  // Strip leading digit + symbol artifact e.g. "4 & Telur Ayam" -> "Telur Ayam"
+  cleaned = cleaned.replace(/^\d+\s*[®@©\*\-><~•|#_:\/&]+\s+(?=[a-zA-Z]{3,})/i, "").trim();
+  // Normalize mismatched closing bracket first e.g. [xxx) -> [xxx] or (BUY 1 GET 1)
+  cleaned = cleaned.replace(/\[([^\]\(\)]+)\)/g, "[$1]");
+  cleaned = cleaned.replace(/^\((BUY\s+1\s+GET\s+1)\)/i, "[$1]");
+  // Strip leading unclosed bracket noise like "[34 p " (no closing bracket within 25 chars)
+  cleaned = cleaned.replace(/^\[(?![^\]]{3,25}\])[\da-z\s*&•~-]{1,6}\s+(?=[a-zA-Z]{3,})/i, "").trim();
+  // Strip leading 1-2 letter thumbnail noise (e.g. "Ea Telur Ayam" -> "Telur Ayam")
+  cleaned = cleaned
+    .replace(/^(?!(?:ES|MI|PT|CV|UD)\b)[a-z]{1,2}\s+(?=[a-zA-Z]{2,})/i, "")
+    .trim();
+  // Strip trailing quantity column artifact e.g. " [FLASH SALE] 1", " ... |", " ... l"
+  cleaned = cleaned.replace(/\s+[|/\dliI]+$/, "").trim();
+  // Fix OCR glitches in common tags e.g. "BUY | GET" -> "BUY 1 GET"
+  cleaned = cleaned.replace(/\bBUY\s+[|lI]\s+GET\b/i, "BUY 1 GET");
+  cleaned = cleaned.replace(/\[FLASH SAL[IE][^\]]*$/i, "[FLASH SALE]");
+  cleaned = cleaned.replace(/\(FLASH SAL[IE][^\]]*$/i, "[FLASH SALE]");
+  return cleaned;
+}
+
+function isProductItemFollower(line: NormalizedLine | undefined): boolean {
+  if (!line) return false;
+  const text = line.normalized.trim();
+  // Quantity patterns: "1kg x5", "x5", "x 1", "2 pcs", "Qty: 1", "500gr x 2"
+  if (
+    /\b(?:x\s*\d+|\d+\s*x\b|\d+\s*(?:kg|gr|g|ml|l|pcs|buah|btl|box|paket)\s*x\s*\d+|\bqty\b)/i.test(
+      text
+    )
+  ) {
+    return true;
+  }
+  // Price line: "Rp30.000", "Rp 25.000"
+  if (/^(?:Rp|IDR)\s*[\d\.,]+$/i.test(text)) {
+    return true;
+  }
+  return false;
+}
+
 export function extractName(
   lines: NormalizedLine[],
   docType: DocumentType
 ): Field<string> {
+  // Strategy 0: Pulsa / Paket Data / Cellular digital products
+  const fullText = lines.map((l) => l.upper).join(" ");
+  const hasPhoneContext =
+    /\b(PHONE\s*NUMBER|NOMOR\s*(?:HP|HANDPHONE|TELEPON|TELP|PONSEL)|NO\.?\s*(?:HP|TELEPON|TELP)|MSISDN)\b/i.test(
+      fullText
+    ) || /\b08[1-9]\d{7,10}\b/.test(fullText);
+  const hasDigitalContext =
+    /\b(PULSA|PAKET\s*DATA|DATA\s*PACKAGE|PRODUK\s*DIGITAL|DIGITAL\s*PRODUCTS?|ISI\s*ULANG|TOP\s*UP)\b/i.test(
+      fullText
+    );
+
+  // Even / round nominal pattern (e.g. 5.000, 10.000, 25.000, 50.000, 100.000, 10k, 25rb)
+  const ROUND_PULSA_DENOM_REGEX = /\b(?:[1-9]\d{0,2}(?:\.000|\s*000|k|rb)|1\.000\.000)\b/i;
+
+  for (const line of lines) {
+    if (!line) continue;
+    const upper = line.upper;
+    // Skip generic informational/banner lines
+    if (
+      upper.includes("THANK YOU") ||
+      upper.includes("PURCHASING") ||
+      upper.includes("DIGITAL PRODUCTS") ||
+      upper.includes("PRODUK DIGITAL")
+    ) {
+      continue;
+    }
+
+    for (const provider of CELLULAR_PROVIDERS) {
+      if (provider.pattern.test(upper)) {
+        const hasRoundDenom = ROUND_PULSA_DENOM_REGEX.test(upper);
+        const hasPulsaWord = /\b(PULSA|PAKET|DATA|QUOTA|KUOTA)\b/i.test(upper);
+
+        if (hasPhoneContext || hasDigitalContext || hasRoundDenom || hasPulsaWord) {
+          const isData = /\b(DATA|PAKET|QUOTA|KUOTA)\b/i.test(upper);
+          const finalName = isData
+            ? `Pembayaran paket data ${provider.name}`
+            : `Pembayaran pulsa ${provider.name}`;
+
+          return {
+            value: finalName,
+            confidence: 0.95,
+            rule: `digital_pulsa:${provider.name.toLowerCase()}`,
+          };
+        }
+      }
+    }
+  }
+
+  // Strategy 0.5: Marketplace / E-commerce Order Detail (Shopee, Tokopedia, TikTok Shop, etc.)
+  const hasMarketplaceContext =
+    (/\b(?:ALAMAT\s*PENGIRIMAN|HUBUNGI\s*PENJUAL|TOTAL\s*PESANAN|BATALKAN\s*PESANAN|DELIVERY\s*DETAILS|ORDER\s*RECEIPT|TIKTOK\s*SHOP|TOKOPEDIA|ITEM\s*DESC)\b/i.test(
+      fullText
+    ) ||
+      (/\b(?:RINCIAN\s*PESANAN|DETAIL\s*PESANAN|ORDER\s*DETAILS?)\b/i.test(fullText) &&
+        /\b(?:PENGIRIMAN|KURIR|ONGKIR|LACAK|PENJUAL|DELIVERY|SOLD\s*BY)\b/i.test(fullText))) &&
+    !/\b(?:DINE-IN|DINE\s*IN|TAKE\s*AWAY|TAKEAWAY|MEJA|PB1)\b/i.test(fullText);
+
+  if (hasMarketplaceContext) {
+    // 0.5a. Table with Item Description Header
+    const ITEM_DESCRIPTION_HEADERS = [
+      "ITEM DESCRIPTION",
+      "ITEM DESERIPTION",
+      "DESKRIPSI BARANG",
+      "DESKRIPSI PRODUK",
+      "NAMA BARANG",
+      "NAMA PRODUK",
+      "RINCIAN BARANG",
+      "RINCIAN PRODUK",
+    ];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+      const upper = line.upper;
+
+      if (ITEM_DESCRIPTION_HEADERS.some((hdr) => upper.includes(hdr))) {
+        let nextIdx = i + 1;
+        while (nextIdx < lines.length && !lines[nextIdx]?.normalized.trim()) {
+          nextIdx++;
+        }
+        if (nextIdx < lines.length) {
+          const rawItem = lines[nextIdx]?.normalized || "";
+          const cleaned = cleanProductCandidate(rawItem);
+          if (
+            cleaned.length >= 3 &&
+            !GENERIC_KEYWORDS.some((kw) => cleaned.toUpperCase().includes(kw)) &&
+            !ADDRESS_PHONE_REGEX.test(cleaned)
+          ) {
+            return {
+              value: toTitleCase(cleaned).slice(0, 60),
+              confidence: 0.95,
+              rule: "item_description_header",
+            };
+          }
+        }
+      }
+    }
+
+    // 0.5b. Line followed immediately by quantity or unit price
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+      const upper = line.upper;
+
+      // Skip generic/order meta lines or address/phone lines
+      if (
+        GENERIC_KEYWORDS.some((kw) => upper.includes(kw)) ||
+        ADDRESS_PHONE_REGEX.test(upper) ||
+        /\d{9,}/.test(line.normalized)
+      ) {
+        continue;
+      }
+
+      // Check if next line is an item follower (quantity or unit price)
+      const nextLine = lines[i + 1];
+      if (isProductItemFollower(nextLine)) {
+        const cleaned = cleanProductCandidate(line.normalized);
+        if (
+          cleaned.length >= 3 &&
+          !GENERIC_KEYWORDS.some((kw) => cleaned.toUpperCase().includes(kw)) &&
+          !ADDRESS_PHONE_REGEX.test(cleaned)
+        ) {
+          const letterChars = cleaned.match(/[a-zA-Z]/g) || [];
+          if (letterChars.length >= 3 && letterChars.length / cleaned.length >= 0.4) {
+            return {
+              value: toTitleCase(cleaned).slice(0, 60),
+              confidence: 0.95,
+              rule: "marketplace_order_item",
+            };
+          }
+        }
+      }
+    }
+  }
   // Strategy 1: Explicit recipient / beneficiary labels (E-wallet, Bank Transfer, or Labeled receipts)
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -280,9 +507,13 @@ export function extractName(
 export function toTitleCase(str: string): string {
   return str
     .toLowerCase()
-    .replace(/(?:^|\s|\/|-)\S/g, (char) => char.toUpperCase())
+    .replace(/(?:^|[\s\/\-\[\(])([a-z])/gi, (match, letter) => match.slice(0, -1) + letter.toUpperCase())
     .replace(/\bKe\b/g, "ke")
     .replace(/\bDi\b/g, "di")
-    .replace(/\bDari\b/g, "dari");
+    .replace(/\bDari\b/g, "dari")
+    .replace(/\bKg\b/g, "kg")
+    .replace(/\bGr\b/g, "gr")
+    .replace(/\bMl\b/g, "ml")
+    .replace(/\bPcs\b/g, "pcs");
 }
 

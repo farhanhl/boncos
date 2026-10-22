@@ -407,5 +407,77 @@ ka cela
       expect(parsed.status).toBe("ok");
       expect(parsed.extraction_confidence).toBeGreaterThanOrEqual(0.8);
     });
+
+    it("correctly extracts Shopee checkout order details with product item, payment time, and total pesanan", () => {
+      const rawShopeeCheckout = `
+09.20 mm al > ©
+& Rincian Pesanan
+Alamat Pengiriman
+© Jane Doe (+62) 812-3456-7890
+Jl. Mawar No. 10 RT.01/RW.02, KOTA JAKARTA... Lihat
+© Mekarsari Dwi Mitra
+Ea Telur Ayam Negeri / Horn 1 kg
+1kg x5
+Rp30.000
+Total Pesanan: Rp122.200
+Dengan VIP, kamu sudah hemat Rp43.000.
+Butuh Bantuan?
+©) Hubungi Penjual
+(D Customer Service Prioritas
+No. Pesanan 261018XXXXXXXX | Salin
+Metode Pembayaran SPayLater
+@z Konversi transaksimu menjadi cicilan untuk
+é pembayaran lebih fleksibel! eels
+Waktu Pemesanan 18-10-2026 09:15
+Waktu Pembayaran 18-10-2026 09:16
+Lihat Lebih Sedikit
+Batalkan Pesanan Hubungi Penjual
+      `.trim();
+
+      const parsed = parseReceiptText(rawShopeeCheckout);
+      expect(parsed.doc_type).toBe("receipt");
+      expect(parsed.name.value).toBe("Telur Ayam Negeri / Horn 1 kg");
+      expect(parsed.name.rule).toBe("marketplace_order_item");
+      expect(parsed.amount.value).toBe(122200);
+      expect(parsed.expense_date.value).toBe("2026-10-18");
+      expect(parsed.category_suggestion.value).toBe("food");
+      expect(parsed.status).toBe("ok");
+      expect(parsed.extraction_confidence).toBeGreaterThanOrEqual(0.85);
+    });
+
+    it("correctly extracts TikTok Shop / Tokopedia order receipt with item description, receipt date, and grand total", () => {
+      const rawTikTokShop = `
+Shop | tokopedia Order Receipt
+Receipt Number : 20261016-586596XXXXXXXXXXXX
+Receipt Date : October 16, 2026 13:30
+Delivery Details Sold By Order Details
+Jane Doe Daily Care by Unilever Order Number 586596XXXXXXXXXXXX
+Order Date October 15, 2026 07:46
+Jl. Mawar No. 10 Rt.01/Rw.02, KOTA JAKARTA
+Indonesia
+Item Description Quantity
+[BUY 1 GET 1] Rexona Men APA Ice Cool 40g [FLASH SALE] 1
+Subtotal Rp34.200
+Application service fee Rp1.600
+Shipping Rp7.500
+Coupons - Rp13.680
+TikTok Shop shipping coupons - Rp7.500
+Grand total (includes VAT) Rp22.120
+Any applicable company fees include VAT at the applicable rate
+TOKOPEDIA
+Tax ID: 0210893970035000
+This receipt serves as proof of purchase. Thank you for your purchase.
+      `.trim();
+
+      const parsed = parseReceiptText(rawTikTokShop);
+      expect(parsed.doc_type).toBe("receipt");
+      expect(parsed.name.value).toBe("[Buy 1 Get 1] Rexona Men Apa Ice Cool 40g [Flash Sale]");
+      expect(parsed.name.rule).toBe("item_description_header");
+      expect(parsed.amount.value).toBe(22120);
+      expect(parsed.expense_date.value).toBe("2026-10-16");
+      expect(parsed.category_suggestion.value).toBe("shopping");
+      expect(parsed.status).toBe("ok");
+      expect(parsed.extraction_confidence).toBeGreaterThanOrEqual(0.9);
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getExpenseById } from "@/actions/expenses";
+import { listCustomCategories } from "@/actions/categories";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 
 export const dynamic = "force-dynamic";
@@ -14,15 +15,20 @@ interface EditExpensePageProps {
 
 export default async function EditExpensePage({ params }: EditExpensePageProps) {
   const { id } = await params;
-  const res = await getExpenseById(id);
+  const [res, catRes] = await Promise.all([
+    getExpenseById(id),
+    listCustomCategories(),
+  ]);
 
   if (!res.ok || !res.data) {
     notFound();
   }
 
+  const customCategories = catRes.ok && catRes.data ? catRes.data : [];
+
   return (
     <main>
-      <ExpenseForm initialData={res.data} />
+      <ExpenseForm initialData={res.data} customCategories={customCategories} />
     </main>
   );
 }

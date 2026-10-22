@@ -14,6 +14,7 @@ export const createExpenseSchema = z.object({
   category_id: z.string().nullable().optional(),
   note: z.string().trim().max(300, "Catatan maksimal 300 karakter").nullable().optional(),
   source: z.enum(["manual", "scan"]),
+  scan_method: z.enum(["manual", "ocr", "ai"]).nullable().optional(),
   extraction_confidence: z.number().min(0).max(1).nullable().optional(),
 });
 
@@ -45,7 +46,9 @@ export interface ExpenseRecord {
   category_id: string | null;
   note: string | null;
   source: "manual" | "scan";
+  scan_method?: "manual" | "ocr" | "ai" | null;
   extraction_confidence: number | null;
   created_at: string; // ISO string for client
   updated_at: string;
 }
+

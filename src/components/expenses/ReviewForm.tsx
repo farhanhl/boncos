@@ -7,20 +7,41 @@ import { DEFAULT_CATEGORY_LIST } from "@/lib/categories";
 import { parseRupiahInput } from "@/lib/money";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { createExpense } from "@/actions/expenses";
+import { listCustomCategories, type CustomCategoryRecord } from "@/actions/categories";
 import type { ExtractionResult } from "@/lib/extract/types";
 
 interface ReviewFormProps {
   extraction: ExtractionResult;
   imageFile: File;
+  customCategories?: CustomCategoryRecord[];
   onCancel: () => void;
 }
 
 export function ReviewForm({
   extraction,
   imageFile,
+  customCategories,
   onCancel,
 }: ReviewFormProps) {
   const router = useRouter();
+
+  const [fetchedCategories, setFetchedCategories] = useState<CustomCategoryRecord[]>([]);
+
+  useEffect(() => {
+    if (!customCategories) {
+      let isMounted = true;
+      listCustomCategories().then((res) => {
+        if (isMounted && res.ok && res.data) {
+          setFetchedCategories(res.data);
+        }
+      });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [customCategories]);
+
+  const customCats = customCategories || fetchedCategories;
 
   // Local object URL for client-only preview (never uploaded)
   const previewUrl = useMemo(() => {
@@ -94,6 +115,10 @@ export function ReviewForm({
         category_id: categoryId,
         note: note.trim() || null,
         source: "scan",
+        scan_method:
+          extraction.name.rule === "ai" || extraction.name.rule === "gemini_ai"
+            ? "ai"
+            : "ocr",
         extraction_confidence: extraction.extraction_confidence,
       });
 
@@ -284,11 +309,22 @@ export function ReviewForm({
               onChange={(e) => setCategoryId(e.target.value)}
               className="bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] w-full text-base cursor-pointer"
             >
-              {DEFAULT_CATEGORY_LIST.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
+              <optgroup label="Kategori Bawaan">
+                {DEFAULT_CATEGORY_LIST.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </optgroup>
+              {customCats.length > 0 && (
+                <optgroup label="Kategori Kustom">
+                  {customCats.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
 

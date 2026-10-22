@@ -153,3 +153,16 @@ export function formatDateIndonesian(
 
   return `${d} ${monthName} ${y}`;
 }
+
+/**
+ * Formats an ISO timestamp string or Date object into 'HH:mm' (local time).
+ * Example: '2026-10-18T14:05:00.000Z' -> '14:05' (in local timezone)
+ */
+export function formatTime(date: string | Date | null | undefined): string {
+  if (!date) return "";
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (isNaN(parsed.getTime())) return "";
+  const hours = String(parsed.getHours()).padStart(2, "0");
+  const minutes = String(parsed.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}

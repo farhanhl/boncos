@@ -82,9 +82,18 @@ export function extractCategorySuggestion(
     const isHeader = lineIndex < 3;
     const lineWeight = isHeader ? 3 : 1;
 
+    const isPaymentMethodLine = /\b(?:METODE PEMBAYARAN|PAYMENT METHOD|KONVERSI\b.*?\bCICILAN|CICILAN UNTUK PEMBAYARAN)\b/i.test(
+      line.upper
+    );
+
     for (const [slug, keywords] of Object.entries(CATEGORY_KEYWORDS) as [CategorySlug, string[]][]) {
       // In physical store receipts, avoid payment method "transfer" overshadowing the store category
       if (slug === "transfer" && docType === "receipt") {
+        continue;
+      }
+
+      // Avoid payment method or installment banners (e.g. SPayLater, Cicilan) skewing receipt purchase category
+      if (slug === "bills" && docType === "receipt" && isPaymentMethodLine) {
         continue;
       }
 

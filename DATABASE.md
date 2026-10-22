@@ -20,6 +20,7 @@ users/{uid}/expenses/{expenseId}
   category_id: string | null       // slug kategori default ('food') atau id dokumen kategori custom
   note: string | null
   source: 'manual' | 'scan'
+  scan_method?: 'manual' | 'ocr' | 'ai'  // metode input/ekstraksi
   extraction_confidence: number | null   // 0–1, hanya untuk source = 'scan'
   created_at: Timestamp
   updated_at: Timestamp

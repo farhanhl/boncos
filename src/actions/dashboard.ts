@@ -7,6 +7,7 @@ import {
   calculatePeakSpendingDay,
   type PeakSpendingDay,
 } from "@/lib/dashboard-stats";
+import type { CustomCategoryRecord } from "@/actions/categories";
 import type { ExpenseRecord } from "@/types/expense";
 
 export type { PeakSpendingDay };
@@ -30,6 +31,7 @@ export interface DashboardSummaryData {
   categoryBreakdown: CategorySummaryItem[];
   monthlyBudget: number;
   peakSpendingDay: PeakSpendingDay | null;
+  customCategories: CustomCategoryRecord[];
 }
 
 export async function getDashboardSummary(
@@ -133,16 +135,44 @@ export async function getDashboardSummary(
           updated_at: d.updated_at?.toDate ? d.updated_at.toDate().toISOString() : new Date().toISOString(),
         };
       });
+
+      recentExpenses.sort((a, b) => {
+        const dateComp = b.expense_date.localeCompare(a.expense_date);
+        if (dateComp !== 0) return dateComp;
+        return (b.created_at || "").localeCompare(a.created_at || "");
+      });
     } catch {
       recentExpenses = [...thisMonthExpenses]
-        .sort((a, b) => b.expense_date.localeCompare(a.expense_date))
+        .sort((a, b) => {
+          const dateComp = b.expense_date.localeCompare(a.expense_date);
+          if (dateComp !== 0) return dateComp;
+          return (b.created_at || "").localeCompare(a.created_at || "");
+        })
         .slice(0, 5);
+    }
+
+    // Fetch custom categories for name/color resolution
+    let customCategories: CustomCategoryRecord[] = [];
+    try {
+      const customCatsSnap = await userCol(user.uid, "categories").orderBy("created_at", "asc").get();
+      customCategories = customCatsSnap.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          name: d.name,
+          icon: d.icon || "PiTagBold",
+          color: d.color || "#FF9F45",
+          created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : new Date().toISOString(),
+        };
+      });
+    } catch {
+      customCategories = [];
     }
 
     // Breakdown array sorted by total
     const categoryBreakdown: CategorySummaryItem[] = Array.from(catMap.entries())
       .map(([catId, stats]) => {
-        const catInfo = getCategoryById(catId);
+        const catInfo = getCategoryById(catId, customCategories);
         return {
           categoryId: catId,
           name: catInfo.name,
@@ -180,6 +210,7 @@ export async function getDashboardSummary(
         categoryBreakdown,
         monthlyBudget,
         peakSpendingDay,
+        customCategories,
       },
     };
   } catch (err) {

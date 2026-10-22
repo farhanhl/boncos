@@ -10,7 +10,7 @@ export type DefaultCategorySlug =
   | "other";
 
 export interface CategoryInfo {
-  id: DefaultCategorySlug;
+  id: string;
   name: string;
   color: string;
   iconName: string;
@@ -75,9 +75,32 @@ export const DEFAULT_CATEGORIES: Record<DefaultCategorySlug, CategoryInfo> = {
 
 export const DEFAULT_CATEGORY_LIST = Object.values(DEFAULT_CATEGORIES);
 
-export function getCategoryById(id: string | null | undefined): CategoryInfo {
-  if (id && id in DEFAULT_CATEGORIES) {
+export interface CustomCategoryLike {
+  id: string;
+  name: string;
+  color: string;
+  icon?: string;
+  iconName?: string;
+}
+
+export function getCategoryById(
+  id: string | null | undefined,
+  customCategories?: CustomCategoryLike[]
+): CategoryInfo {
+  if (!id) return DEFAULT_CATEGORIES.other;
+  if (id in DEFAULT_CATEGORIES) {
     return DEFAULT_CATEGORIES[id as DefaultCategorySlug];
+  }
+  if (customCategories && customCategories.length > 0) {
+    const custom = customCategories.find((c) => c.id === id);
+    if (custom) {
+      return {
+        id: custom.id,
+        name: custom.name,
+        color: custom.color,
+        iconName: custom.icon || custom.iconName || "PiTagBold",
+      };
+    }
   }
   return DEFAULT_CATEGORIES.other;
 }

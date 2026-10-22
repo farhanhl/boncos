@@ -4,6 +4,8 @@ import { findMoneyTokens } from "./money";
 
 const STRONG_TOTAL_KEYWORDS = [
   "GRAND TOTAL",
+  "TOTAL PAYMENT",
+  "TOTAL PESANAN",
   "TOTAL BAYAR",
   "TOTAL PEMBAYARAN",
   "TOTAL TAGIHAN",
@@ -113,9 +115,10 @@ export function extractAmount(
             // Pick rightmost token
             const rightmost = tokens[tokens.length - 1];
             if (rightmost) {
+              const isSpecificLabel = kw !== "TOTAL";
               candidatesTier1.push({
                 amount: rightmost.amount,
-                confidence: 0.9,
+                confidence: isSpecificLabel ? 0.95 : 0.9,
                 rule: `tier1:${kw}`,
                 lineIndex: i,
               });

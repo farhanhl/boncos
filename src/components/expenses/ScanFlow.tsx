@@ -5,8 +5,13 @@ import { useRouter } from "next/navigation";
 import { UploadDropzone } from "./UploadDropzone";
 import { ReviewForm } from "./ReviewForm";
 import type { ExtractionResult } from "@/lib/extract/types";
+import type { CustomCategoryRecord } from "@/actions/categories";
 
-export function ScanFlow() {
+interface ScanFlowProps {
+  customCategories?: CustomCategoryRecord[];
+}
+
+export function ScanFlow({ customCategories }: ScanFlowProps = {}) {
   const router = useRouter();
   const [extractedData, setExtractedData] = useState<ExtractionResult | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -30,6 +35,7 @@ export function ScanFlow() {
       <ReviewForm
         extraction={extractedData}
         imageFile={imageFile}
+        customCategories={customCategories}
         onCancel={handleCancel}
       />
     );

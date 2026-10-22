@@ -5,7 +5,7 @@ import { userCol } from "./firebase/admin";
 import { decryptText } from "./crypto";
 import { formatRupiah } from "./money";
 import { formatDate } from "./date";
-import { getCategoryById } from "./categories";
+import { DEFAULT_CATEGORIES, getCategoryById } from "./categories";
 
 export interface ExpenseNotificationData {
   name: string;
@@ -13,6 +13,7 @@ export interface ExpenseNotificationData {
   expense_date: string;
   category_id: string | null;
   source: "manual" | "scan";
+  method?: "manual" | "ocr" | "ai" | null;
 }
 
 export interface TelegramSettingsDoc {
@@ -195,8 +196,32 @@ export async function sendTelegramNotificationForExpense(
     }
 
     const token = decryptText(settings.bot_token_enc);
-    const categoryInfo = getCategoryById(data.category_id);
-    const sourceLabel = data.source === "scan" ? "Scan struk" : "Manual";
+    let categoryInfo = getCategoryById(data.category_id);
+    if (data.category_id && !(data.category_id in DEFAULT_CATEGORIES)) {
+      try {
+        const catDoc = await userCol(uid, "categories").doc(data.category_id).get();
+        if (catDoc.exists) {
+          const d = catDoc.data();
+          if (d?.name) {
+            categoryInfo = {
+              id: catDoc.id,
+              name: d.name,
+              color: d.color || "#FF9F45",
+              iconName: d.icon || "PiTagBold",
+            };
+          }
+        }
+      } catch {
+        // Fallback to categoryInfo
+      }
+    }
+
+    let sourceLabel = "Manual";
+    if (data.method === "ai") {
+      sourceLabel = "AI";
+    } else if (data.method === "ocr" || data.source === "scan") {
+      sourceLabel = "OCR";
+    }
 
     const messageHtml = [
       "💸 <b>Pengeluaran baru</b>",
@@ -217,6 +242,7 @@ export interface ScanNotificationOptions {
   success: boolean;
   errorReason?: string;
   imageUrl?: string | null;
+  method?: "ocr" | "ai";
   expense?: {
     name: string;
     amount: number;
@@ -247,14 +273,33 @@ export async function sendTelegramScanResult(
 
     let messageHtml = "";
     if (options.success && options.expense) {
-      const categoryInfo = getCategoryById(options.expense.category_id);
+      let categoryInfo = getCategoryById(options.expense.category_id);
+      if (options.expense.category_id && !(options.expense.category_id in DEFAULT_CATEGORIES)) {
+        try {
+          const catDoc = await userCol(uid, "categories").doc(options.expense.category_id).get();
+          if (catDoc.exists) {
+            const d = catDoc.data();
+            if (d?.name) {
+              categoryInfo = {
+                id: catDoc.id,
+                name: d.name,
+                color: d.color || "#FF9F45",
+                iconName: d.icon || "PiTagBold",
+              };
+            }
+          }
+        } catch {
+          // Fallback
+        }
+      }
+      const sourceLabel = options.method === "ai" ? "AI" : "OCR";
       messageHtml = [
         "🧾 <b>Pencatatan Struk Berhasil!</b>",
         `Nama: <b>${escapeHtml(options.expense.name)}</b>`,
         `Nominal: <b>${escapeHtml(formatRupiah(options.expense.amount))}</b>`,
         `Tanggal: ${escapeHtml(formatDate(options.expense.expense_date))}`,
         `Kategori: ${escapeHtml(categoryInfo.name)}`,
-        `Metode: <i>Webhook Scan Otomatis</i>`,
+        `Sumber: <b>${sourceLabel}</b>`,
       ].join("\n");
     } else {
       const lines = [
