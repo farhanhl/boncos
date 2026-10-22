@@ -11,11 +11,12 @@ describe("Timeout Utility Tests", () => {
   });
 
   it("rejects with TimeoutError when promise exceeds timeout limit", async () => {
-    const slowPromise = new Promise<string>((resolve) =>
-      setTimeout(() => resolve("too slow"), 300)
-    );
-    await expect(withTimeout(slowPromise, 100)).rejects.toThrow(TimeoutError);
-    await expect(withTimeout(slowPromise, 100)).rejects.toThrow(
+    const makeSlowPromise = () =>
+      new Promise<string>((resolve) =>
+        setTimeout(() => resolve("too slow"), 500)
+      );
+    await expect(withTimeout(makeSlowPromise(), 100)).rejects.toThrow(TimeoutError);
+    await expect(withTimeout(makeSlowPromise(), 100)).rejects.toThrow(
       "Permintaan melebihi batas waktu 30 detik."
     );
   });
