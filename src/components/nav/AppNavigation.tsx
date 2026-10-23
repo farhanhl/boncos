@@ -97,16 +97,6 @@ export function AppNavigation({ userDisplayName }: AppNavigationProps) {
             v1.0
           </span>
         </div>
-
-        {/* Primary CTA: Baca struk */}
-        <Link
-          href="/expenses/new?tab=scan"
-          className="bg-kuning text-karbon font-bold border-2 border-karbon rounded-md shadow-hard min-h-11 px-4 mb-6 flex items-center justify-center gap-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-hard-lg active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-[transform,box-shadow] duration-100"
-        >
-          <PiCameraBold className="text-xl text-karbon" />
-          <span className="text-karbon">Baca Struk</span>
-        </Link>
-
         {/* Navigation Links */}
         <nav className="flex flex-col gap-2 flex-1">
           {navItems.map((item) => {
