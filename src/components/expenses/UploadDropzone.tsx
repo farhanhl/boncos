@@ -28,16 +28,12 @@ export function UploadDropzone({
     async (file: File) => {
       setErrorInfo(null);
       setIsProcessing(true);
-      setStatusText("Lagi baca struknya");
+      setStatusText("Menganalisis struk dengan AI...");
 
       try {
         let result: ExtractionResult;
-        const isAiMode =
-          process.env.NEXT_PUBLIC_EXTRACTION_MODE === "ai" ||
-          process.env.NEXT_PUBLIC_EXTRACTION_MODE === "gemini";
-
-        if (isAiMode) {
-          setStatusText("Menganalisis struk dengan AI...");
+        // Strategy: Always try AI first, then fallback to OCR
+        try {
           const formData = new FormData();
           formData.append("image", file);
           const aiRes = await extractReceiptAction(formData);
@@ -45,17 +41,12 @@ export function UploadDropzone({
           if (aiRes.ok && aiRes.data) {
             result = aiRes.data;
           } else {
-            // Fallback ke OCR lokal jika server/AI gagal atau kuota habis
-            setStatusText("Beralih ke pembaca struk lokal...");
-            result = await extractFromImage(file, (status) => {
-              if (status.includes("loading") || status.includes("init")) {
-                setStatusText("Menyiapkan pembaca struk, cukup sekali");
-              } else if (status.includes("recognizing")) {
-                setStatusText("Lagi baca struknya");
-              }
-            });
+            // AI unavailable/failed — fallback to local OCR
+            throw new Error(aiRes.error || "AI_FALLBACK");
           }
-        } else {
+        } catch {
+          // Fallback to local OCR extraction
+          setStatusText("Beralih ke pembaca struk lokal...");
           result = await extractFromImage(file, (status) => {
             if (status.includes("loading") || status.includes("init")) {
               setStatusText("Menyiapkan pembaca struk, cukup sekali");
@@ -180,7 +171,7 @@ export function UploadDropzone({
           {statusText}…
         </div>
         <p className="text-xs text-tinta-pudar mt-1">
-          Diproses langsung di perambanmu tanpa kirim gambar ke server.
+          Sedang memproses gambar strukmu…
         </p>
       </div>
     );

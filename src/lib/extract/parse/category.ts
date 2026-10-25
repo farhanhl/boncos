@@ -35,6 +35,26 @@ const STRONG_TRANSFER_INDICATORS = [
   "PENERIMA TRANSFER",
 ];
 
+interface CompiledKeyword {
+  regex: RegExp;
+  kwWeight: number;
+}
+
+const COMPILED_CATEGORY_KEYWORDS: [CategorySlug, CompiledKeyword[]][] = (
+  Object.entries(CATEGORY_KEYWORDS) as [CategorySlug, string[]][]
+).map(([slug, keywords]) => [
+  slug,
+  keywords.map((kw) => {
+    const isMultiWord = kw.includes(" ") || kw.includes("-") || kw.length >= 8;
+    const kwWeight = isMultiWord ? 2 : 1;
+    const escaped = escapeRegex(kw);
+    return {
+      regex: new RegExp(`(?:^|[^A-Z0-9])${escaped}(?:$|[^A-Z0-9])`, "g"),
+      kwWeight,
+    };
+  }),
+]);
+
 export function extractCategorySuggestion(
   lines: NormalizedLine[],
   docType?: DocumentType
@@ -86,7 +106,7 @@ export function extractCategorySuggestion(
       line.upper
     );
 
-    for (const [slug, keywords] of Object.entries(CATEGORY_KEYWORDS) as [CategorySlug, string[]][]) {
+    for (const [slug, compiledList] of COMPILED_CATEGORY_KEYWORDS) {
       // In physical store receipts, avoid payment method "transfer" overshadowing the store category
       if (slug === "transfer" && docType === "receipt") {
         continue;
@@ -97,15 +117,11 @@ export function extractCategorySuggestion(
         continue;
       }
 
-      for (const kw of keywords) {
-        const isMultiWord = kw.includes(" ") || kw.includes("-") || kw.length >= 8;
-        const kwWeight = isMultiWord ? 2 : 1;
-
-        const escaped = escapeRegex(kw);
-        const regex = new RegExp(`(?:^|[^A-Z0-9])${escaped}(?:$|[^A-Z0-9])`, "g");
-        const matches = line.upper.match(regex);
+      for (const item of compiledList) {
+        item.regex.lastIndex = 0;
+        const matches = line.upper.match(item.regex);
         if (matches) {
-          scores[slug] += matches.length * lineWeight * kwWeight;
+          scores[slug] += matches.length * lineWeight * item.kwWeight;
         }
       }
     }

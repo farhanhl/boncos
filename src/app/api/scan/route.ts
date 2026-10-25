@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import path from "node:path";
+import sharp from "sharp";
 import { createWorker } from "tesseract.js";
 import { FieldValue } from "firebase-admin/firestore";
 import { userCol } from "@/lib/firebase/admin";
@@ -50,7 +51,6 @@ async function runTesseractOcrAndParse(imageBuffer: Buffer): Promise<{
 
   let processedBuffer = imageBuffer;
   try {
-    const sharp = (await import("sharp")).default;
     const meta = await sharp(imageBuffer).metadata();
     const targetWidth = Math.max(meta.width || 0, 2000);
     processedBuffer = await sharp(imageBuffer)
@@ -179,43 +179,27 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Ekstraksi Dokumen: Gemini AI atau Tesseract OCR berdasarkan ENV
-    let parsed: ExtractionResult;
+    // 3. Ekstraksi Dokumen: AI dulu, fallback ke OCR
+    let parsed!: ExtractionResult;
     let ocrText = "";
+    let usedAi = false;
 
     if (isGeminiExtractionEnabled()) {
       try {
-        parsed = await extractReceiptWithGemini(
-          imageBuffer,
-          mimeType
-        );
+        parsed = await extractReceiptWithGemini(imageBuffer, mimeType);
         ocrText = parsed.raw_text;
+        usedAi = true;
       } catch (geminiErr) {
         console.warn(
           "[POST /api/scan] Ekstraksi Gemini AI gagal, beralih ke OCR:",
           geminiErr
         );
-        try {
-          const ocrRes = await runTesseractOcrAndParse(imageBuffer);
-          parsed = ocrRes.parsed;
-          ocrText = ocrRes.ocrText;
-        } catch (ocrErr) {
-          console.error("[POST /api/scan OCR Error]:", ocrErr);
-          const failReason = "Mesin OCR gagal membaca gambar struk.";
-          const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
-
-          return NextResponse.json(
-            {
-              ok: false,
-              error: "OCR_ERROR",
-              message: `Pencatatan gagal karena: ${failReason}`,
-              image_url: uploadedUrl,
-            },
-            { status: 422 }
-          );
-        }
+        // Fall through to OCR below
       }
-    } else {
+    }
+
+    // OCR fallback: runs if AI is disabled or AI extraction threw an error
+    if (!usedAi) {
       try {
         const ocrRes = await runTesseractOcrAndParse(imageBuffer);
         parsed = ocrRes.parsed;
@@ -238,7 +222,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Validasi Dokumen Pengeluaran
-    const isAiMode = parsed.name.rule === "ai" || parsed.name.rule === "gemini_ai";
+    const isAiMode = usedAi;
     if (!isAiMode) {
       const lines = normalizeOcrText(ocrText);
       const isValidExpense = isExpenseDocument(lines, parsed.doc_type, parsed);

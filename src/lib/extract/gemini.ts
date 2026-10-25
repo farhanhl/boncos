@@ -54,7 +54,7 @@ export async function extractReceiptWithGemini(
   }
 
   const model = process.env.AI_MODEL || "gemini-2.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const base64Image = imageBuffer.toString("base64");
 
@@ -95,6 +95,25 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
     generationConfig: {
       responseMimeType: "application/json",
       temperature: 0.1,
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          name: { type: "STRING", description: "Nama pengeluaran/item/merchant" },
+          amount: { type: "INTEGER", description: "Total nominal Rupiah (integer penuh)" },
+          expense_date: { type: "STRING", description: "Tanggal transaksi YYYY-MM-DD" },
+          category_suggestion: {
+            type: "STRING",
+            enum: ["food", "transport", "shopping", "bills", "entertainment", "health", "education", "transfer", "other"],
+          },
+          doc_type: {
+            type: "STRING",
+            enum: ["receipt", "ewallet", "bank_transfer", "unknown"],
+          },
+          confidence: { type: "NUMBER", description: "Keyakinan 0.0 - 1.0" },
+          summary: { type: "STRING", description: "Ringkasan singkat transaksi" },
+        },
+        required: ["name", "amount"],
+      },
     },
   };
 
@@ -102,6 +121,7 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
     },
     body: JSON.stringify(requestBody),
   });
@@ -138,7 +158,7 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
 
   const categorySuggestionVal: CategorySlug =
     parsedData.category_suggestion &&
-    VALID_CATEGORIES.includes(parsedData.category_suggestion)
+      VALID_CATEGORIES.includes(parsedData.category_suggestion)
       ? parsedData.category_suggestion
       : "other";
 
@@ -149,8 +169,8 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
 
   const confidence =
     typeof parsedData.confidence === "number" &&
-    parsedData.confidence >= 0 &&
-    parsedData.confidence <= 1
+      parsedData.confidence >= 0 &&
+      parsedData.confidence <= 1
       ? parsedData.confidence
       : 0.95;
 

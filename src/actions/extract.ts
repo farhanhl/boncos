@@ -4,6 +4,10 @@ import { getCurrentUser } from "@/lib/firebase/session";
 import { isGeminiExtractionEnabled, extractReceiptWithGemini } from "@/lib/extract/gemini";
 import type { ExtractionResult } from "@/lib/extract/types";
 
+/**
+ * Server action for AI-based receipt extraction.
+ * Returns AI_UNAVAILABLE when Gemini is not configured, allowing client to fallback to OCR.
+ */
 export async function extractReceiptAction(
   formData: FormData
 ): Promise<{ ok: boolean; data?: ExtractionResult; error?: string }> {
@@ -14,7 +18,8 @@ export async function extractReceiptAction(
     }
 
     if (!isGeminiExtractionEnabled()) {
-      return { ok: false, error: "GEMINI_DISABLED" };
+      // Return a non-fatal status so the client can seamlessly fallback to OCR
+      return { ok: false, error: "AI_UNAVAILABLE" };
     }
 
     const file = formData.get("image") as File | null;

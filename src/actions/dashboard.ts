@@ -55,15 +55,13 @@ export async function getDashboardSummary(
 
     const expensesCol = userCol(user.uid, "expenses");
 
-    // Fetch this month expenses (single-field query on 'month' - no composite index required)
-    const thisMonthSnap = await expensesCol
-      .where("month", "==", currentMonth)
-      .get();
-
-    // Fetch last month expenses
-    const lastMonthSnap = await expensesCol
-      .where("month", "==", lastMonth)
-      .get();
+    // Parallel Firestore reads: all independent queries at once
+    const [thisMonthSnap, lastMonthSnap, customCatsSnap, budgetDoc] = await Promise.all([
+      expensesCol.where("month", "==", currentMonth).get(),
+      expensesCol.where("month", "==", lastMonth).get(),
+      userCol(user.uid, "categories").orderBy("created_at", "asc").get().catch(() => null),
+      userCol(user.uid, "settings").doc("budget").get().catch(() => null),
+    ]);
 
     // Sum last month
     let lastMonthTotal = 0;
@@ -109,52 +107,18 @@ export async function getDashboardSummary(
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
 
-    // Recent 5 expenses (try fetching recent, or fallback to in-memory)
-    let recentExpenses: ExpenseRecord[] = [];
-    try {
-      const recentExpensesSnap = await expensesCol
-        .orderBy("expense_date", "desc")
-        .limit(5)
-        .get();
-
-      recentExpenses = recentExpensesSnap.docs.map((doc) => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          name: d.name,
-          name_lower: d.name_lower,
-          amount: d.amount || 0,
-          currency: d.currency || "IDR",
-          expense_date: d.expense_date,
-          month: d.month,
-          category_id: d.category_id || null,
-          note: d.note || null,
-          source: d.source || "manual",
-          extraction_confidence: d.extraction_confidence ?? null,
-          created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : new Date().toISOString(),
-          updated_at: d.updated_at?.toDate ? d.updated_at.toDate().toISOString() : new Date().toISOString(),
-        };
-      });
-
-      recentExpenses.sort((a, b) => {
+    // Recent 5 expenses: derived from this month's data (no extra Firestore query)
+    const recentExpenses = [...thisMonthExpenses]
+      .sort((a, b) => {
         const dateComp = b.expense_date.localeCompare(a.expense_date);
         if (dateComp !== 0) return dateComp;
         return (b.created_at || "").localeCompare(a.created_at || "");
-      });
-    } catch {
-      recentExpenses = [...thisMonthExpenses]
-        .sort((a, b) => {
-          const dateComp = b.expense_date.localeCompare(a.expense_date);
-          if (dateComp !== 0) return dateComp;
-          return (b.created_at || "").localeCompare(a.created_at || "");
-        })
-        .slice(0, 5);
-    }
+      })
+      .slice(0, 5);
 
-    // Fetch custom categories for name/color resolution
+    // Custom categories from parallel fetch
     let customCategories: CustomCategoryRecord[] = [];
-    try {
-      const customCatsSnap = await userCol(user.uid, "categories").orderBy("created_at", "asc").get();
+    if (customCatsSnap) {
       customCategories = customCatsSnap.docs.map((doc) => {
         const d = doc.data();
         return {
@@ -165,8 +129,6 @@ export async function getDashboardSummary(
           created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : new Date().toISOString(),
         };
       });
-    } catch {
-      customCategories = [];
     }
 
     // Breakdown array sorted by total
@@ -184,13 +146,8 @@ export async function getDashboardSummary(
       .sort((a, b) => b.total - a.total);
 
     let monthlyBudget = 0;
-    try {
-      const budgetDoc = await userCol(user.uid, "settings").doc("budget").get();
-      if (budgetDoc.exists) {
-        monthlyBudget = budgetDoc.data()?.monthly_budget || 0;
-      }
-    } catch {
-      monthlyBudget = 0;
+    if (budgetDoc?.exists) {
+      monthlyBudget = budgetDoc.data()?.monthly_budget || 0;
     }
 
     const diff = currentMonthTotal - lastMonthTotal;

@@ -93,8 +93,8 @@ scripts/
 
 ## Keputusan Arsitektur
 1. **Uang disimpan sebagai integer.** Jangan pakai float/desimal.
-2. **Tanpa AI.** Ekstraksi = OCR + aturan. Tidak ada SDK/API key/panggilan LLM di mana pun.
-3. **Ekstraksi di klien.** Gambar dan teks OCR tidak pernah dikirim ke server; server hanya menerima data final hasil review.
+2. **Mode Ekstraksi Dual (AI Utama, OCR Fallback).** Ekstraksi mengutamakan AI di server via Gemini API (`AI_API_KEY`) untuk akurasi tinggi. Jika AI tidak aktif atau gagal, otomatis fallback ke OCR lokal (Tesseract.js + aturan murni).
+3. **Privasi Gambar.** Gambar hanya diproses sementara di memori untuk ekstraksi (tidak pernah disimpan permanen di database, bucket storage, maupun server disk). Server hanya menerima data final hasil review user untuk disimpan.
 4. **Gambar tidak pernah disimpan.** Diproses di memori browser lalu dibuang. Tidak ada Storage, signed URL, atau arsip.
 5. **Ekstraksi ≠ penyimpanan.** Hasil ekstraksi hanya mengisi form; penyimpanan setelah konfirmasi user. Server memvalidasi ulang semuanya.
 6. **Akses data hanya lewat server (Admin SDK).** Firebase di klien hanya untuk Auth. Security Rules = deny all.

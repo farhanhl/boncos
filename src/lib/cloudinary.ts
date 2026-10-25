@@ -31,8 +31,12 @@ export async function uploadToCloudinary(
   buffer: Buffer,
   mimeType: string = "image/jpeg"
 ): Promise<string | null> {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "qxwi3ibh";
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "tibatiba_preset";
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) {
+    return null;
+  }
 
   try {
     const formData = new FormData();
