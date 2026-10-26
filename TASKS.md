@@ -47,6 +47,7 @@ Kerjakan **parser dulu** (murni, mudah diuji), baru OCR dan UI.
 ## Fase 5 — Dashboard
 - [x] Summary cards (aggregation `sum`), chart kategori, transaksi terakhir
 - [x] Informasi hari pengeluaran terbesar pada bulan yang dipilih (`PeakSpendingDayCard`)
+- [x] Ringkasan & visualisasi tren pengeluaran per hari dan per minggu (`DailyWeeklySpendingCard`)
 - [x] Kelola kategori custom
 
 ## Fase 6 — Polish

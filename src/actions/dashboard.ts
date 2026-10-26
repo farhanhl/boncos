@@ -5,12 +5,24 @@ import { userCol } from "@/lib/firebase/admin";
 import { getCategoryById } from "@/lib/categories";
 import {
   calculatePeakSpendingDay,
+  calculateDailySpending,
+  calculateWeeklySpending,
   type PeakSpendingDay,
+  type DailySpendingSummary,
+  type WeeklySpendingSummary,
+  type DailySpendingItem,
+  type WeeklySpendingItem,
 } from "@/lib/dashboard-stats";
 import type { CustomCategoryRecord } from "@/actions/categories";
 import type { ExpenseRecord } from "@/types/expense";
 
-export type { PeakSpendingDay };
+export type {
+  PeakSpendingDay,
+  DailySpendingSummary,
+  WeeklySpendingSummary,
+  DailySpendingItem,
+  WeeklySpendingItem,
+};
 
 export interface CategorySummaryItem {
   categoryId: string;
@@ -31,6 +43,8 @@ export interface DashboardSummaryData {
   categoryBreakdown: CategorySummaryItem[];
   monthlyBudget: number;
   peakSpendingDay: PeakSpendingDay | null;
+  dailySpending: DailySpendingSummary;
+  weeklySpending: WeeklySpendingSummary;
   customCategories: CustomCategoryRecord[];
 }
 
@@ -153,6 +167,8 @@ export async function getDashboardSummary(
     const diff = currentMonthTotal - lastMonthTotal;
     const diffType = diff > 0 ? "boncos" : diff < 0 ? "hemat" : "same";
     const peakSpendingDay = calculatePeakSpendingDay(thisMonthExpenses);
+    const dailySpending = calculateDailySpending(thisMonthExpenses, currentMonth);
+    const weeklySpending = calculateWeeklySpending(thisMonthExpenses, currentMonth);
 
     return {
       ok: true,
@@ -167,6 +183,8 @@ export async function getDashboardSummary(
         categoryBreakdown,
         monthlyBudget,
         peakSpendingDay,
+        dailySpending,
+        weeklySpending,
         customCategories,
       },
     };

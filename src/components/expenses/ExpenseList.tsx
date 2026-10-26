@@ -390,6 +390,49 @@ export function ExpenseList({
         </div>
       </div>
 
+      {/* Quick Summary Pill for Filtered Expenses (Per Hari & Per Minggu) */}
+      {filteredExpenses.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-karbon/50 border-2 border-tinta/20 rounded-lg px-4 py-2.5 text-xs">
+          <div className="flex items-center gap-2 font-bold text-tinta">
+            <span className="text-tinta-pudar">Total Terpilih:</span>
+            <span className="text-kuning tabular-nums text-sm font-display">
+              {formatRupiah(filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0))}
+            </span>
+            <span className="text-tinta-pudar font-normal">
+              ({filteredExpenses.length} transaksi)
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-tinta-pudar font-semibold">
+            <div>
+              Rata-rata/hari:{" "}
+              <span className="text-tinta font-bold tabular-nums">
+                {formatRupiah(
+                  Math.round(
+                    filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0) /
+                      Math.max(1, new Set(filteredExpenses.map((e) => e.expense_date)).size)
+                  )
+                )}
+              </span>
+            </div>
+            <div>
+              Rata-rata/minggu:{" "}
+              <span className="text-tinta font-bold tabular-nums">
+                {formatRupiah(
+                  Math.round(
+                    filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0) /
+                      Math.max(
+                        1,
+                        Math.ceil(new Set(filteredExpenses.map((e) => e.expense_date)).size / 7)
+                      )
+                  )
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* List / Empty State */}
       <div
         ref={listTopRef}
