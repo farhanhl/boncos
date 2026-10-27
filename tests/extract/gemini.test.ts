@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isGeminiExtractionEnabled, extractReceiptWithGemini } from "@/lib/extract/gemini";
+import {
+  isGeminiExtractionEnabled,
+  extractReceiptWithGemini,
+  normalizeExtractedDate,
+} from "@/lib/extract/gemini";
 
 describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
   const originalEnv = process.env;
@@ -121,6 +125,62 @@ describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
       expect(result.amount.value).toBe(5000);
       expect(result.expense_date.value).toBeNull();
       expect(result.category_suggestion.value).toBe("food");
+    });
+
+    it("normalizes non-ISO date format like DD/MM/YYYY or DD-MM-YYYY to YYYY-MM-DD", async () => {
+      process.env.AI_API_KEY = "dummy-key";
+
+      const mockJson = {
+        name: "Warung Imen",
+        amount: 3000,
+        expense_date: "27/10/2026",
+        category_suggestion: "food",
+        doc_type: "receipt",
+        confidence: 0.95,
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: JSON.stringify(mockJson) }],
+              },
+            },
+          ],
+        }),
+      } as unknown as Response);
+
+      const buffer = Buffer.from("dummy-image-bytes");
+      const result = await extractReceiptWithGemini(buffer);
+
+      expect(result.expense_date.value).toBe("2026-10-27");
+    });
+  });
+
+  describe("normalizeExtractedDate", () => {
+    it("returns YYYY-MM-DD unchanged", () => {
+      expect(normalizeExtractedDate("2026-10-27")).toBe("2026-10-27");
+      expect(normalizeExtractedDate("2026/10/27")).toBe("2026-10-27");
+    });
+
+    it("converts DD/MM/YYYY and DD-MM-YYYY to YYYY-MM-DD", () => {
+      expect(normalizeExtractedDate("27/10/2026")).toBe("2026-10-27");
+      expect(normalizeExtractedDate("27-10-2026")).toBe("2026-10-27");
+      expect(normalizeExtractedDate("05/01/2026")).toBe("2026-01-05");
+    });
+
+    it("converts two-digit year DD/MM/YY to 20YY-MM-DD", () => {
+      expect(normalizeExtractedDate("27/10/26")).toBe("2026-10-27");
+      expect(normalizeExtractedDate("01-05-26")).toBe("2026-05-01");
+    });
+
+    it("returns null for invalid or empty date", () => {
+      expect(normalizeExtractedDate(null)).toBeNull();
+      expect(normalizeExtractedDate(undefined)).toBeNull();
+      expect(normalizeExtractedDate("")).toBeNull();
+      expect(normalizeExtractedDate("invalid-date")).toBeNull();
     });
   });
 });

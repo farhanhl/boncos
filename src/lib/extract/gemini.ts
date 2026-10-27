@@ -42,6 +42,36 @@ export function isAiExtractionEnabled(): boolean {
 export const isGeminiExtractionEnabled = isAiExtractionEnabled;
 
 /**
+ * Normalizes date returned by AI into YYYY-MM-DD.
+ * Handles ISO (YYYY-MM-DD), DD/MM/YYYY, DD-MM-YYYY, or two-digit years (DD/MM/YY).
+ */
+export function normalizeExtractedDate(rawDate?: string | null): string | null {
+  if (!rawDate || typeof rawDate !== "string") return null;
+  const trimmed = rawDate.trim();
+
+  // Case 1: YYYY-MM-DD or YYYY/MM/DD
+  const isoMatch = trimmed.match(/^(\d{4})[-/](0[1-9]|1[0-2])[-/](0[1-9]|[12]\d|3[01])$/);
+  if (isoMatch && isoMatch[1] && isoMatch[2] && isoMatch[3]) {
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  // Case 2: DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = trimmed.match(/^(0[1-9]|[12]\d|3[01])[-/](0[1-9]|1[0-2])[-/](\d{4})$/);
+  if (dmyMatch && dmyMatch[1] && dmyMatch[2] && dmyMatch[3]) {
+    return `${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]}`;
+  }
+
+  // Case 3: DD-MM-YY or DD/MM/YY
+  const dmyShortMatch = trimmed.match(/^(0[1-9]|[12]\d|3[01])[-/](0[1-9]|1[0-2])[-/](\d{2})$/);
+  if (dmyShortMatch && dmyShortMatch[1] && dmyShortMatch[2] && dmyShortMatch[3]) {
+    const year = 2000 + parseInt(dmyShortMatch[3], 10);
+    return `${year}-${dmyShortMatch[2]}-${dmyShortMatch[1]}`;
+  }
+
+  return null;
+}
+
+/**
  * Extracts receipt information from an image buffer using Google Gemini API.
  */
 export async function extractReceiptWithGemini(
@@ -58,13 +88,24 @@ export async function extractReceiptWithGemini(
 
   const base64Image = imageBuffer.toString("base64");
 
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
+  const currentYear = now.getFullYear();
+
   const prompt = `Anda adalah asisten pencatat pengeluaran keuangan berbahasa Indonesia.
 Tugas Anda adalah membaca gambar bukti transaksi/struk belanja/nota/bukti transfer dan mengekstrak data penting secara akurat.
+
+Konteks Waktu Saat Ini:
+- Tanggal hari ini adalah: ${todayIso} (Tahun ${currentYear}).
 
 Petunjuk Ekstraksi:
 1. name: Nama pengeluaran utama atau merchant/toko. Jika struk belanja minimarket/marketplace (seperti Shopee, TikTok Shop, Alfamart, Indomaret) memiliki item barang spesifik, gunakan nama item produk utama (sertakan varian/tag promo jika ada, misal: "[Buy 1 Get 1] Rexona Men Apa Ice Cool 40g [Flash Sale]" atau "Telur Ayam Negri 1 kg"). Jika transfer bank/e-wallet, sebutkan tujuannya (misal: "Transfer ke Warkop Lina").
 2. amount: Nominal TOTAL belanja / Grand Total yang dibayarkan oleh pembeli. Nilai HARUS INTEGER RUPIAH penuh (contoh: jika Rp22.120 maka 22120; jika 122.000 maka 122000). Jangan gunakan subtotal atau nominal sebelum diskon.
-3. expense_date: Tanggal transaksi / receipt date dalam format persis "YYYY-MM-DD". Prioritaskan tanggal pembayaran/resi/receipt date dibanding tanggal pemesanan.
+3. expense_date: Tanggal transaksi / receipt date dalam format persis "YYYY-MM-DD".
+   - Perhatikan tahun transaksi dengan sangat teliti. Jika pada gambar tertera tahun ${currentYear} (atau format dua digit "26"), gunakan tahun ${currentYear}.
+   - Jangan berasumsi atau mengubah tahun menjadi 2024 atau tahun masa lalu jika struk/bukti bertanggal tahun ini (${currentYear}) atau masa kini.
+   - Jika pada struk hanya tertera tanggal dan bulan tanpa tahun (contoh: "27 Okt" atau "27/10"), gunakan tahun saat ini yaitu ${currentYear}.
+   - Prioritaskan tanggal pembayaran/resi/receipt date dibanding tanggal pemesanan.
 4. category_suggestion: Pilih salah satu dari kategori ini: "food", "transport", "shopping", "bills", "entertainment", "health", "education", "transfer", "other".
    - Makanan/minuman/bahan pangan (telur, beras, warung, resto): "food"
    - Toko/fashion/skincare/supermarket umum: "shopping"
@@ -100,7 +141,10 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
         properties: {
           name: { type: "STRING", description: "Nama pengeluaran/item/merchant" },
           amount: { type: "INTEGER", description: "Total nominal Rupiah (integer penuh)" },
-          expense_date: { type: "STRING", description: "Tanggal transaksi YYYY-MM-DD" },
+          expense_date: {
+            type: "STRING",
+            description: `Tanggal transaksi dalam format YYYY-MM-DD. Perhatikan tahun dengan benar (gunakan tahun yang tertera atau tahun saat ini ${currentYear} jika tanpa tahun).`,
+          },
           category_suggestion: {
             type: "STRING",
             enum: ["food", "transport", "shopping", "bills", "entertainment", "health", "education", "transfer", "other"],
@@ -150,11 +194,7 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
       ? Math.round(parsedData.amount)
       : null;
 
-  const validDateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  const expenseDateVal =
-    parsedData.expense_date && validDateRegex.test(parsedData.expense_date)
-      ? parsedData.expense_date
-      : null;
+  const expenseDateVal = normalizeExtractedDate(parsedData.expense_date);
 
   const categorySuggestionVal: CategorySlug =
     parsedData.category_suggestion &&

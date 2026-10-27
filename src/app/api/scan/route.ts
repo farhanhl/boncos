@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import path from "node:path";
 import sharp from "sharp";
 import { createWorker } from "tesseract.js";
@@ -320,6 +321,13 @@ export async function POST(request: Request) {
     };
 
     await docRef.set(expenseData);
+
+    try {
+      revalidatePath("/dashboard");
+      revalidatePath("/expenses");
+    } catch {
+      // Best-effort cache revalidation
+    }
 
     // 6. Notifikasi Telegram Sukses (jika user mengaitkan telegram)
     await sendTelegramScanResult(uid, {
