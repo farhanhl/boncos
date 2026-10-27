@@ -1,12 +1,12 @@
 "use server";
 
 import { getCurrentUser } from "@/lib/firebase/session";
-import { isGeminiExtractionEnabled, extractReceiptWithGemini } from "@/lib/extract/gemini";
+import { extractReceiptWithGemini } from "@/lib/extract/gemini";
 import type { ExtractionResult } from "@/lib/extract/types";
 
 /**
  * Server action for AI-based receipt extraction.
- * Returns AI_UNAVAILABLE when Gemini is not configured, allowing client to fallback to OCR.
+ * Processes receipt image directly using Gemini AI (OCR disabled).
  */
 export async function extractReceiptAction(
   formData: FormData
@@ -17,9 +17,12 @@ export async function extractReceiptAction(
       return { ok: false, error: "UNAUTHORIZED" };
     }
 
-    if (!isGeminiExtractionEnabled()) {
-      // Return a non-fatal status so the client can seamlessly fallback to OCR
-      return { ok: false, error: "AI_UNAVAILABLE" };
+    const apiKey = (process.env.AI_API_KEY || "").trim();
+    if (!apiKey) {
+      return {
+        ok: false,
+        error: "AI_API_KEY belum dikonfigurasi di environment server.",
+      };
     }
 
     const file = formData.get("image") as File | null;

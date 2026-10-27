@@ -1,17 +1,13 @@
 import { NextResponse, after } from "next/server";
 import { revalidatePath } from "next/cache";
-import path from "node:path";
 import sharp from "sharp";
-import { createWorker } from "tesseract.js";
 import { FieldValue } from "firebase-admin/firestore";
 import { userCol } from "@/lib/firebase/admin";
 import { getUidByIngestionKey } from "@/actions/ingestion";
-import { parseReceiptText, isExpenseDocument } from "@/lib/extract/parse";
-import { normalizeOcrText } from "@/lib/extract/parse/normalize";
 import { sendTelegramScanResult } from "@/lib/telegram";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
-import { isGeminiExtractionEnabled, extractReceiptWithGemini } from "@/lib/extract/gemini";
+import { extractReceiptWithGemini } from "@/lib/extract/gemini";
 import type { ExtractionResult } from "@/lib/extract/types";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +17,7 @@ export const maxDuration = 30;
 /**
  * Optimizes an uploaded receipt image by auto-rotating EXIF,
  * constraining max dimensions to 1400x1800, and compressing to JPEG.
- * Reduces 5MB-10MB camera uploads to ~250KB-400KB, accelerating AI & OCR by 3-5x.
+ * Reduces 5MB-10MB camera uploads to ~250KB-400KB, accelerating AI processing.
  */
 async function optimizeImageForProcessing(
   buffer: Buffer
@@ -59,43 +55,6 @@ async function reportScanFailure(
     imageUrl: uploadedUrl,
   });
   return uploadedUrl;
-}
-
-async function runTesseractOcrAndParse(imageBuffer: Buffer): Promise<{
-  parsed: ExtractionResult;
-  ocrText: string;
-}> {
-  const workerPath = path.resolve(
-    process.cwd(),
-    "node_modules/tesseract.js/src/worker-script/node/index.js"
-  );
-
-  const worker = await createWorker(["ind", "eng"], 1, {
-    workerPath,
-    langPath: path.resolve(process.cwd(), "public/tesseract"),
-    cachePath: path.resolve(process.cwd(), "public/tesseract"),
-  });
-
-  let processedBuffer = imageBuffer;
-  try {
-    processedBuffer = await sharp(imageBuffer)
-      .trim()
-      .resize({ width: 1400, height: 1800, fit: "inside", withoutEnlargement: true })
-      .grayscale()
-      .normalize()
-      .toBuffer();
-  } catch {
-    // Fallback to original imageBuffer
-  }
-
-  const { data } = await worker.recognize(processedBuffer);
-  const ocrText = data.text || "";
-  const ocrConfidence =
-    typeof data.confidence === "number" ? data.confidence / 100 : 0.8;
-  await worker.terminate();
-
-  const parsed = parseReceiptText(ocrText, ocrConfidence);
-  return { parsed, ocrText };
 }
 
 export async function POST(request: Request) {
@@ -209,69 +168,31 @@ export async function POST(request: Request) {
     imageBuffer = optimizedImage.buffer;
     mimeType = optimizedImage.mimeType;
 
-    // 3. Ekstraksi Dokumen: AI dulu, fallback ke OCR
+    // 3. Ekstraksi Dokumen: Mode AI Murni (OCR dinonaktifkan)
     let parsed!: ExtractionResult;
-    let ocrText = "";
-    let usedAi = false;
 
-    if (isGeminiExtractionEnabled()) {
-      try {
-        parsed = await extractReceiptWithGemini(imageBuffer, mimeType);
-        ocrText = parsed.raw_text;
-        usedAi = true;
-      } catch (geminiErr) {
-        console.warn(
-          "[POST /api/scan] Ekstraksi Gemini AI gagal, beralih ke OCR:",
-          geminiErr instanceof Error ? geminiErr.message : geminiErr
-        );
-        // Fall through to OCR below
-      }
-    }
+    try {
+      parsed = await extractReceiptWithGemini(imageBuffer, mimeType);
+    } catch (geminiErr) {
+      const errMsg =
+        geminiErr instanceof Error ? geminiErr.message : "Gagal memproses struk dengan AI.";
+      console.error("[POST /api/scan] Ekstraksi Gemini AI gagal:", errMsg);
+      const failReason = `Ekstraksi AI gagal: ${errMsg}`;
+      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
 
-    // OCR fallback: runs if AI is disabled or AI extraction threw an error
-    if (!usedAi) {
-      try {
-        const ocrRes = await runTesseractOcrAndParse(imageBuffer);
-        parsed = ocrRes.parsed;
-        ocrText = ocrRes.ocrText;
-      } catch (ocrErr) {
-        console.error("[POST /api/scan OCR Error]:", ocrErr);
-        const failReason = "Mesin OCR gagal membaca gambar struk.";
-        const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
-
-        return NextResponse.json(
-          {
-            ok: false,
-            error: "OCR_ERROR",
-            message: `Pencatatan gagal karena: ${failReason}`,
-            image_url: uploadedUrl,
-          },
-          { status: 422 }
-        );
-      }
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "AI_ERROR",
+          message: `Pencatatan gagal karena: ${failReason}`,
+          image_url: uploadedUrl,
+        },
+        { status: 422 }
+      );
     }
 
     // 4. Validasi Dokumen Pengeluaran
-    const isAiMode = usedAi;
-    if (!isAiMode) {
-      const lines = normalizeOcrText(ocrText);
-      const isValidExpense = isExpenseDocument(lines, parsed.doc_type, parsed);
-
-      if (!isValidExpense) {
-        const failReason = "Foto yang diunggah bukan struk atau nota pembayaran.";
-        const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
-
-        return NextResponse.json(
-          {
-            ok: false,
-            error: "NOT_AN_EXPENSE",
-            message: `Pencatatan gagal karena: ${failReason}`,
-            image_url: uploadedUrl,
-          },
-          { status: 422 }
-        );
-      }
-    } else if (parsed.doc_type === "unknown" && !parsed.amount.value) {
+    if (parsed.doc_type === "unknown" && !parsed.amount.value) {
       const failReason = "Foto yang diunggah bukan struk atau bukti bayar pengeluaran.";
       const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
 
@@ -305,10 +226,7 @@ export async function POST(request: Request) {
 
     if (!amountVal || !Number.isSafeInteger(amountVal) || amountVal <= 0) {
       const failReason =
-        parsed.warnings[0] ||
-        (ocrText.trim().length < 5
-          ? "Gambar buram atau tidak ada teks terbaca pada struk."
-          : "Nominal total belanja tidak ditemukan pada struk.");
+        parsed.warnings[0] || "Nominal total belanja tidak ditemukan pada struk.";
       const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
 
       return NextResponse.json(
@@ -329,9 +247,7 @@ export async function POST(request: Request) {
     const categoryId = parsed.category_suggestion.value || "other";
 
     const docRef = userCol(uid, "expenses").doc();
-    const note = isAiMode
-      ? `Auto-scan via AI (${parsed.doc_type})`
-      : `Auto-scan via Webhook (${parsed.doc_type})`;
+    const note = `Auto-scan via AI (${parsed.doc_type})`;
 
     const expenseData = {
       name,
@@ -343,7 +259,7 @@ export async function POST(request: Request) {
       category_id: categoryId,
       note,
       source: "scan",
-      scan_method: isAiMode ? "ai" : "ocr",
+      scan_method: "ai",
       extraction_confidence: parsed.extraction_confidence,
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
@@ -365,7 +281,7 @@ export async function POST(request: Request) {
       try {
         await sendTelegramScanResult(targetUid, {
           success: true,
-          method: isAiMode ? "ai" : "ocr",
+          method: "ai",
           expense: {
             name,
             amount: amountVal,

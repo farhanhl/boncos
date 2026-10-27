@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { PiCameraBold, PiUploadSimpleBold, PiWarningBold } from "react-icons/pi";
-import { extractFromImage, ExtractionError } from "@/lib/extract";
 import { extractReceiptAction } from "@/actions/extract";
 import type { ExtractionResult } from "@/lib/extract/types";
 
@@ -17,7 +16,7 @@ export function UploadDropzone({
 }: UploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [statusText, setStatusText] = useState("Lagi baca struknya");
+  const [statusText, setStatusText] = useState("Menganalisis struk dengan AI...");
   const [progressStep, setProgressStep] = useState(0);
   const [errorInfo, setErrorInfo] = useState<{ title: string; message: string } | null>(null);
 
@@ -31,57 +30,26 @@ export function UploadDropzone({
       setStatusText("Menganalisis struk dengan AI...");
 
       try {
-        let result: ExtractionResult;
-        // Strategy: Always try AI first, then fallback to OCR
-        try {
-          const formData = new FormData();
-          formData.append("image", file);
-          const aiRes = await extractReceiptAction(formData);
+        const formData = new FormData();
+        formData.append("image", file);
+        const aiRes = await extractReceiptAction(formData);
 
-          if (aiRes.ok && aiRes.data) {
-            result = aiRes.data;
-          } else {
-            // AI unavailable/failed — fallback to local OCR
-            throw new Error(aiRes.error || "AI_FALLBACK");
-          }
-        } catch {
-          // Fallback to local OCR extraction
-          setStatusText("Beralih ke pembaca struk lokal...");
-          result = await extractFromImage(file, (status) => {
-            if (status.includes("loading") || status.includes("init")) {
-              setStatusText("Menyiapkan pembaca struk, cukup sekali");
-            } else if (status.includes("recognizing")) {
-              setStatusText("Lagi baca struknya");
-            }
-          });
+        if (!aiRes.ok || !aiRes.data) {
+          throw new Error(aiRes.error || "Gagal memproses struk dengan AI.");
         }
 
         setIsProcessing(false);
-        onExtractionSuccess(result, file);
+        onExtractionSuccess(aiRes.data, file);
       } catch (err) {
         setIsProcessing(false);
-        console.error("[UploadDropzone] Error scanning receipt:", err);
-        if (err instanceof ExtractionError) {
-          const title =
-            err.code === "NOT_AN_EXPENSE"
-              ? "Bukan Struk atau Bukti Bayar"
-              : err.code === "LOW_CONFIDENCE"
-              ? "Tingkat Keyakinan Terlalu Rendah (< 50%)"
-              : err.code === "NO_TEXT"
-              ? "Teks Tidak Terbaca"
-              : err.code === "INVALID_FILE"
-              ? "File Tidak Sesuai"
-              : "Gagal Membaca";
-          setErrorInfo({ title, message: err.message });
-        } else {
-          setErrorInfo({
-            title: "Gagal Membaca",
-            message:
-              err instanceof Error
-                ? `Pembaca struk gagal: ${err.message}`
-                : "Pembaca struk gagal memproses gambar. Coba lagi atau isi manual.",
-          });
-        }
+        console.error("[UploadDropzone] Error scanning receipt with AI:", err);
+        setErrorInfo({
+          title: "Gagal Membaca Struk",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Terjadi kesalahan saat memproses gambar dengan AI. Coba lagi atau catat manual.",
+        });
       }
     },
     [onExtractionSuccess]
