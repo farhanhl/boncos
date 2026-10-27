@@ -222,7 +222,7 @@ export async function POST(request: Request) {
       } catch (geminiErr) {
         console.warn(
           "[POST /api/scan] Ekstraksi Gemini AI gagal, beralih ke OCR:",
-          geminiErr
+          geminiErr instanceof Error ? geminiErr.message : geminiErr
         );
         // Fall through to OCR below
       }

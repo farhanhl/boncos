@@ -88,16 +88,19 @@ export async function extractReceiptWithGemini(
 
   let processedBuffer = imageBuffer;
   let processedMime = mimeType;
-  try {
-    const sharp = (await import("sharp")).default;
-    processedBuffer = await sharp(imageBuffer)
-      .rotate()
-      .resize({ width: 1400, height: 1800, fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: 82, progressive: false })
-      .toBuffer();
-    processedMime = "image/jpeg";
-  } catch {
-    // Fallback to original buffer if sharp fails or for non-image buffers in tests
+  // Only run sharp if image is large (> 500KB) and needs compression
+  if (imageBuffer.length > 500 * 1024) {
+    try {
+      const sharp = (await import("sharp")).default;
+      processedBuffer = await sharp(imageBuffer)
+        .rotate()
+        .resize({ width: 1400, height: 1800, fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 82, progressive: false })
+        .toBuffer();
+      processedMime = "image/jpeg";
+    } catch {
+      // Fallback to original buffer if sharp fails or for non-image buffers in tests
+    }
   }
 
   const base64Image = processedBuffer.toString("base64");
@@ -182,7 +185,7 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
       "x-goog-api-key": apiKey,
     },
     body: JSON.stringify(requestBody),
-    signal: AbortSignal.timeout(9000),
+    signal: AbortSignal.timeout(20000),
   });
 
   if (!response.ok) {
