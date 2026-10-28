@@ -46,9 +46,9 @@ describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
   });
 
   describe("getActiveAiModel", () => {
-    it("returns gemini-2.5-flash by default when AI_MODEL is unset", () => {
+    it("returns gemini-3.8-flash by default when AI_MODEL is unset", () => {
       delete process.env.AI_MODEL;
-      expect(getActiveAiModel()).toBe("gemini-2.5-flash");
+      expect(getActiveAiModel()).toBe("gemini-3.8-flash");
     });
 
     it("returns trimmed AI_MODEL when provided", () => {
@@ -169,6 +169,55 @@ describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
       const result = await extractReceiptWithGemini(buffer);
 
       expect(result.expense_date.value).toBe("2026-10-27");
+    });
+
+    it("falls back to candidate model when primary model returns 503 or 404", async () => {
+      process.env.AI_API_KEY = "dummy-key";
+      process.env.AI_MODEL = "gemini-3.8-flash";
+
+      const mockJson = {
+        name: "Indomaret",
+        amount: 15000,
+        expense_date: "2026-10-28",
+        category_suggestion: "shopping",
+        doc_type: "receipt",
+        confidence: 0.99,
+      };
+
+      let callCount = 0;
+      global.fetch = vi.fn().mockImplementation(async (url: string) => {
+        callCount++;
+        // First call to gemini-3.8-flash returns 503
+        if (url.includes("gemini-3.8-flash")) {
+          return {
+            ok: false,
+            status: 503,
+            text: async () => JSON.stringify({ error: { message: "High demand" } }),
+          } as unknown as Response;
+        }
+
+        // Fallback call returns 200
+        return {
+          ok: true,
+          json: async () => ({
+            candidates: [
+              {
+                content: {
+                  parts: [{ text: JSON.stringify(mockJson) }],
+                },
+              },
+            ],
+          }),
+        } as unknown as Response;
+      });
+
+      const buffer = Buffer.from("dummy-image-bytes");
+      const result = await extractReceiptWithGemini(buffer);
+
+      expect(callCount).toBeGreaterThan(1);
+      expect(result.status).toBe("ok");
+      expect(result.name.value).toBe("Indomaret");
+      expect(result.amount.value).toBe(15000);
     });
   });
 

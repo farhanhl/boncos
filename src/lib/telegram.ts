@@ -293,7 +293,7 @@ export async function sendTelegramScanResult(
           // Fallback
         }
       }
-      const modelName = options.model || (options.method === "ai" ? (process.env.AI_MODEL || "gemini-2.5-flash") : null);
+      const modelName = options.model || (options.method === "ai" ? (process.env.AI_MODEL || "gemini-3.8-flash") : null);
       const lines = [
         "🧾 <b>Pencatatan Struk Berhasil!</b>",
         `Nama: <b>${escapeHtml(options.expense.name)}</b>`,
@@ -309,7 +309,7 @@ export async function sendTelegramScanResult(
 
       messageHtml = lines.join("\n");
     } else {
-      const modelName = options.model || (options.method !== "ocr" ? (process.env.AI_MODEL || "gemini-2.5-flash") : null);
+      const modelName = options.model || (options.method !== "ocr" ? (process.env.AI_MODEL || "gemini-3.8-flash") : null);
       const lines = [
         "⚠️ <b>Pencatatan Struk Gagal</b>",
         `Alasan: <b>${escapeHtml(options.errorReason || "Format struk tidak terbaca atau nominal tidak ditemukan")}</b>`,

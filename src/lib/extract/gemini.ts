@@ -42,10 +42,10 @@ export function isAiExtractionEnabled(): boolean {
 export const isGeminiExtractionEnabled = isAiExtractionEnabled;
 
 /**
- * Returns the configured AI model name, defaulting to "gemini-2.5-flash".
+ * Returns the configured AI model name, defaulting to "gemini-3.8-flash".
  */
 export function getActiveAiModel(): string {
-  return (process.env.AI_MODEL || "").trim() || "gemini-2.5-flash";
+  return (process.env.AI_MODEL || "").trim() || "gemini-3.8-flash";
 }
 
 /**
@@ -85,6 +85,12 @@ export interface GeminiExtractionOptions {
   skipOptimization?: boolean;
 }
 
+export const CANDIDATE_FALLBACK_MODELS = [
+  "gemini-3.8-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
+];
+
 export async function extractReceiptWithGemini(
   imageBuffer: Buffer,
   mimeType = "image/jpeg",
@@ -94,9 +100,6 @@ export async function extractReceiptWithGemini(
   if (!apiKey) {
     throw new Error("AI_API_KEY belum dikonfigurasi di environment variable.");
   }
-
-  const model = getActiveAiModel();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   let processedBuffer = imageBuffer;
   let processedMime = mimeType;
@@ -190,26 +193,65 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
     },
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
-    body: JSON.stringify(requestBody),
-    signal: AbortSignal.timeout(20000),
-  });
+  const primaryModel = getActiveAiModel();
+  const modelsToTry = [
+    primaryModel,
+    ...CANDIDATE_FALLBACK_MODELS.filter((m) => m !== primaryModel),
+  ];
 
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => "");
-    throw new Error(
-      `Gemini API request failed with status ${response.status}: ${errorBody.slice(0, 200)}`
-    );
+  let rawText = "{}";
+  let lastError: Error | null = null;
+
+  for (const model of modelsToTry) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    let modelSuccess = false;
+
+    // Up to 2 attempts per model for transient errors (503 / 429)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(18000),
+        });
+
+        if (response.ok) {
+          const jsonResponse = await response.json();
+          rawText =
+            jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+          modelSuccess = true;
+          break;
+        }
+
+        const errorBody = await response.text().catch(() => "");
+        const errMsg = `Gemini API (${model}) failed with status ${response.status}: ${errorBody.slice(0, 250)}`;
+        lastError = new Error(errMsg);
+
+        // If not a transient error (e.g. 404 deprecated or 400 bad request), break to next model immediately
+        if (response.status !== 503 && response.status !== 429 && response.status !== 500) {
+          break;
+        }
+      } catch (fetchErr) {
+        lastError = fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr));
+      }
+    }
+
+    if (modelSuccess) {
+      break;
+    }
   }
 
-  const jsonResponse = await response.json();
-  const rawText =
-    jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+  if (!rawText || rawText === "{}") {
+    throw lastError || new Error("Semua percobaan pemanggilan model Gemini gagal.");
+  }
 
   let parsedData: GeminiReceiptResponse;
   try {
