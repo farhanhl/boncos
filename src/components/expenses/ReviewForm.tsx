@@ -71,6 +71,7 @@ export function ReviewForm({
   const [submitting, setSubmitting] = useState(false);
   const [showSavedStamp, setShowSavedStamp] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   // Check which fields need "Cek lagi" highlight (DESIGN.md 5.6)
   const isNameDoubtful = !extraction.name.value || extraction.name.confidence < 0.7;
@@ -87,9 +88,9 @@ export function ReviewForm({
     setAmountStr(num.toLocaleString("id-ID"));
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeSave = async (allowDuplicate = false) => {
     setErrorMessage(null);
+    setDuplicateWarning(null);
 
     const intAmount = parseRupiahInput(amountStr);
     if (intAmount <= 0) {
@@ -120,9 +121,15 @@ export function ReviewForm({
             ? "ai"
             : "ocr",
         extraction_confidence: extraction.extraction_confidence,
+        allow_duplicate: allowDuplicate,
       });
 
       if (!res.ok) {
+        if (res.error === "DUPLICATE_EXPENSE") {
+          setDuplicateWarning(res.message || "Pengeluaran serupa sudah pernah dicatat.");
+          setSubmitting(false);
+          return;
+        }
         throw new Error(res.message || "Gagal menyimpan pengeluaran.");
       }
 
@@ -135,6 +142,11 @@ export function ReviewForm({
       setErrorMessage(errObj.message || "Terjadi kesalahan.");
       setSubmitting(false);
     }
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    executeSave(false);
   };
 
   return (
@@ -167,6 +179,29 @@ export function ReviewForm({
       {errorMessage && (
         <div className="mb-4 p-3 bg-stempel/10 border-2 border-stempel rounded-md text-stempel text-sm font-semibold">
           {errorMessage}
+        </div>
+      )}
+
+      {duplicateWarning && (
+        <div className="mb-4 p-3 bg-kuning/20 border-2 border-kuning rounded-md text-tinta text-sm font-semibold">
+          <p className="mb-2">⚠️ {duplicateWarning}</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => executeSave(true)}
+              className="px-3 py-1.5 bg-kuning text-karbon text-xs font-bold rounded border border-tinta hover:brightness-105 transition shadow-sm cursor-pointer"
+            >
+              Tetap Simpan
+            </button>
+            <button
+              type="button"
+              onClick={() => setDuplicateWarning(null)}
+              className="px-3 py-1.5 bg-transparent text-xs font-bold rounded border border-tinta/30 hover:bg-tinta/10 transition cursor-pointer"
+            >
+              Batal
+            </button>
+          </div>
         </div>
       )}
 

@@ -16,6 +16,7 @@ export const createExpenseSchema = z.object({
   source: z.enum(["manual", "scan"]),
   scan_method: z.enum(["manual", "ocr", "ai"]).nullable().optional(),
   extraction_confidence: z.number().min(0).max(1).nullable().optional(),
+  allow_duplicate: z.boolean().optional(),
 });
 
 export const updateExpenseSchema = createExpenseSchema.partial().extend({

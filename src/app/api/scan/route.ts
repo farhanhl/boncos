@@ -7,6 +7,8 @@ import { getUidByIngestionKey } from "@/actions/ingestion";
 import { sendTelegramScanResult } from "@/lib/telegram";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { findPotentialDuplicate } from "@/actions/expenses";
 import { extractReceiptWithGemini, getActiveAiModel } from "@/lib/extract/gemini";
 import type { ExtractionResult } from "@/lib/extract/types";
 
@@ -67,6 +69,11 @@ export async function POST(request: Request) {
   try {
     return await withTimeout(
       (async () => {
+    const url = new URL(request.url);
+    let allowDuplicate =
+      url.searchParams.get("allow_duplicate") === "true" ||
+      url.searchParams.get("force") === "true";
+
     const contentType = request.headers.get("content-type") || "";
     let key =
       request.headers.get("x-boncos-key") ||
@@ -78,6 +85,9 @@ export async function POST(request: Request) {
       const formKey = formData.get("key") || formData.get("token") || formData.get("code");
       if (typeof formKey === "string" && formKey.trim()) {
         key = formKey.trim();
+      }
+      if (formData.get("allow_duplicate") === "true" || formData.get("force") === "true") {
+        allowDuplicate = true;
       }
 
       const file = formData.get("file") || formData.get("image");
@@ -93,6 +103,9 @@ export async function POST(request: Request) {
       const body = await request.json().catch(() => ({}));
       if (body.key || body.token || body.code) {
         key = String(body.key || body.token || body.code).trim();
+      }
+      if (body.allow_duplicate === true || body.force === true) {
+        allowDuplicate = true;
       }
 
       const rawBase64 = body.image || body.file;
@@ -127,6 +140,26 @@ export async function POST(request: Request) {
           message: "Kode unik tidak valid atau tidak terdaftar.",
         },
         { status: 401 }
+      );
+    }
+
+    // 2. Proteksi Rate Limiting (15 request / menit per pengguna)
+    const rateCheck = checkRateLimit(`scan:${uid}`, { limit: 15, windowMs: 60_000 });
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "RATE_LIMITED",
+          message: "Terlalu banyak permintaan pemindaian struk. Silakan coba lagi dalam beberapa saat.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.ceil(rateCheck.resetMs / 1000).toString(),
+            "X-RateLimit-Limit": rateCheck.limit.toString(),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
       );
     }
 
@@ -174,11 +207,11 @@ export async function POST(request: Request) {
     imageBuffer = optimizedImage.buffer;
     mimeType = optimizedImage.mimeType;
 
-    // 3. Ekstraksi Dokumen: Mode AI Murni (OCR dinonaktifkan)
+    // 3. Ekstraksi Dokumen: Mode AI Murni (skipOptimization: true karena sudah dioptimasi di atas)
     let parsed!: ExtractionResult;
 
     try {
-      parsed = await extractReceiptWithGemini(imageBuffer, mimeType);
+      parsed = await extractReceiptWithGemini(imageBuffer, mimeType, { skipOptimization: true });
     } catch (geminiErr) {
       const errMsg =
         geminiErr instanceof Error ? geminiErr.message : "Gagal memproses struk dengan AI.";
@@ -251,6 +284,40 @@ export async function POST(request: Request) {
     const month = expenseDate.slice(0, 7);
     const name = parsed.name.value || "Struk Belanja";
     const categoryId = parsed.category_suggestion.value || "other";
+
+    // Proteksi Duplikasi Transaksi (jika allowDuplicate !== true)
+    if (!allowDuplicate) {
+      const duplicate = await findPotentialDuplicate(uid, {
+        name,
+        amount: amountVal,
+        expense_date: expenseDate,
+      });
+
+      if (duplicate) {
+        const failReason = `Struk serupa "${duplicate.name}" (Rp ${duplicate.amount.toLocaleString("id-ID")}) sudah pernah dicatat sebelumnya pada tanggal ${duplicate.expense_date}.`;
+        await sendTelegramScanResult(uid, {
+          success: false,
+          errorReason: `Terdeteksi duplikat: ${failReason}`,
+          method: "ai",
+          model: getActiveAiModel(),
+        });
+
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "DUPLICATE_EXPENSE",
+            message: `Pencatatan dibatalkan: ${failReason}`,
+            data: {
+              existing_id: duplicate.id,
+              name: duplicate.name,
+              amount: duplicate.amount,
+              expense_date: duplicate.expense_date,
+            },
+          },
+          { status: 409 }
+        );
+      }
+    }
 
     const docRef = userCol(uid, "expenses").doc();
     const note = `Auto-scan via AI (${parsed.doc_type})`;

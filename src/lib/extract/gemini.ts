@@ -81,9 +81,14 @@ export function normalizeExtractedDate(rawDate?: string | null): string | null {
 /**
  * Extracts receipt information from an image buffer using Google Gemini API.
  */
+export interface GeminiExtractionOptions {
+  skipOptimization?: boolean;
+}
+
 export async function extractReceiptWithGemini(
   imageBuffer: Buffer,
-  mimeType = "image/jpeg"
+  mimeType = "image/jpeg",
+  options?: GeminiExtractionOptions
 ): Promise<ExtractionResult> {
   const apiKey = (process.env.AI_API_KEY || "").trim();
   if (!apiKey) {
@@ -95,8 +100,8 @@ export async function extractReceiptWithGemini(
 
   let processedBuffer = imageBuffer;
   let processedMime = mimeType;
-  // Only run sharp if image is large (> 500KB) and needs compression
-  if (imageBuffer.length > 500 * 1024) {
+  // Only run sharp if image is large (> 500KB) and needs compression, and not already optimized
+  if (!options?.skipOptimization && imageBuffer.length > 500 * 1024) {
     try {
       const sharp = (await import("sharp")).default;
       processedBuffer = await sharp(imageBuffer)

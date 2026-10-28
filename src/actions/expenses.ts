@@ -22,6 +22,93 @@ export interface ActionResult<T = unknown> {
   message?: string;
 }
 
+export async function findPotentialDuplicate(
+  uid: string,
+  data: { name: string; amount: number; expense_date: string }
+): Promise<ExpenseRecord | null> {
+  const querySnap = await userCol(uid, "expenses")
+    .where("expense_date", "==", data.expense_date)
+    .where("amount", "==", data.amount)
+    .limit(10)
+    .get();
+
+  if (querySnap.empty) {
+    return null;
+  }
+
+  const targetName = data.name.trim().toLowerCase();
+
+  // 1. Check exact or partial name match
+  for (const doc of querySnap.docs) {
+    const d = doc.data();
+    const docName = (d.name_lower || d.name || "").toLowerCase().trim();
+    if (docName === targetName || docName.includes(targetName) || targetName.includes(docName)) {
+      return {
+        id: doc.id,
+        name: d.name,
+        name_lower: d.name_lower || docName,
+        amount: d.amount,
+        currency: d.currency || "IDR",
+        expense_date: d.expense_date,
+        month: d.month || d.expense_date.slice(0, 7),
+        category_id: d.category_id || null,
+        note: d.note || null,
+        source: d.source || "manual",
+        extraction_confidence: d.extraction_confidence ?? null,
+        created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : new Date().toISOString(),
+        updated_at: d.updated_at?.toDate ? d.updated_at.toDate().toISOString() : new Date().toISOString(),
+      };
+    }
+  }
+
+  // 2. If same date and exact amount, return the record as potential duplicate
+  const firstDoc = querySnap.docs[0];
+  if (firstDoc) {
+    const d = firstDoc.data();
+    return {
+      id: firstDoc.id,
+      name: d.name,
+      name_lower: d.name_lower || d.name.toLowerCase(),
+      amount: d.amount,
+      currency: d.currency || "IDR",
+      expense_date: d.expense_date,
+      month: d.month || d.expense_date.slice(0, 7),
+      category_id: d.category_id || null,
+      note: d.note || null,
+      source: d.source || "manual",
+      extraction_confidence: d.extraction_confidence ?? null,
+      created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : new Date().toISOString(),
+      updated_at: d.updated_at?.toDate ? d.updated_at.toDate().toISOString() : new Date().toISOString(),
+    };
+  }
+
+  return null;
+}
+
+export async function checkDuplicateExpense(data: {
+  name: string;
+  amount: number;
+  expense_date: string;
+}): Promise<ActionResult<{ isDuplicate: boolean; duplicate?: ExpenseRecord }>> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { ok: false, error: "UNAUTHORIZED", message: "Silakan masuk terlebih dahulu." };
+    }
+
+    const duplicate = await findPotentialDuplicate(user.uid, data);
+    return {
+      ok: true,
+      data: {
+        isDuplicate: Boolean(duplicate),
+        duplicate: duplicate || undefined,
+      },
+    };
+  } catch {
+    return { ok: false, error: "SERVER_ERROR", message: "Gagal memeriksa duplikasi pengeluaran." };
+  }
+}
+
 export async function createExpense(
   rawInput: CreateExpenseInput
 ): Promise<ActionResult<{ id: string }>> {
@@ -50,7 +137,20 @@ export async function createExpense(
       source,
       scan_method,
       extraction_confidence,
+      allow_duplicate,
     } = parsed.data;
+
+    if (!allow_duplicate) {
+      const duplicate = await findPotentialDuplicate(user.uid, { name, amount, expense_date });
+      if (duplicate) {
+        return {
+          ok: false,
+          error: "DUPLICATE_EXPENSE",
+          message: `Pengeluaran serupa "${duplicate.name}" (Rp ${duplicate.amount.toLocaleString("id-ID")}) sudah pernah dicatat pada tanggal ${duplicate.expense_date}.`,
+          data: { id: duplicate.id },
+        };
+      }
+    }
 
     const month = expense_date.slice(0, 7); // 'YYYY-MM'
     const name_lower = name.toLowerCase();
