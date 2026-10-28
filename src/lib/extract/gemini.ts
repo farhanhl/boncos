@@ -201,6 +201,7 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
 
   let rawText = "{}";
   let lastError: Error | null = null;
+  let successfulModel = primaryModel;
 
   for (const model of modelsToTry) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -227,6 +228,7 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
           const jsonResponse = await response.json();
           rawText =
             jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+          successfulModel = model;
           modelSuccess = true;
           break;
         }
@@ -332,6 +334,7 @@ Kembalikan jawaban HANYA dalam format JSON valid sesuai schema.`;
     ocr_confidence: 0.98,
     warnings: [],
     raw_text: parsedData.summary || `[AI Extraction] ${nameVal || ""} - ${amountVal || ""}`,
+    model_used: successfulModel,
   };
 
 }

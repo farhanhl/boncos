@@ -29,6 +29,7 @@ export interface ExtractionResult {
   ocr_confidence: number; // average OCR line confidence (0-100 or 0-1)
   warnings: string[];
   raw_text: string; // client-only memory, never sent/saved to server
+  model_used?: string; // actual model that successfully processed the receipt
 }
 
 export type ExtractionErrorCode =

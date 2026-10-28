@@ -45,7 +45,8 @@ async function optimizeImageForProcessing(
 async function reportScanFailure(
   uid: string,
   failReason: string,
-  imageBuffer: Buffer | null
+  imageBuffer: Buffer | null,
+  model?: string
 ): Promise<string | null> {
   let uploadedUrl: string | null = null;
   if (imageBuffer && imageBuffer.length > 0) {
@@ -56,7 +57,7 @@ async function reportScanFailure(
     errorReason: failReason,
     imageUrl: uploadedUrl,
     method: "ai",
-    model: getActiveAiModel(),
+    model: model || getActiveAiModel(),
   });
   return uploadedUrl;
 }
@@ -230,10 +231,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const modelUsed = parsed.model_used || getActiveAiModel();
+
     // 4. Validasi Dokumen Pengeluaran
     if (parsed.doc_type === "unknown" && !parsed.amount.value) {
       const failReason = "Foto yang diunggah bukan struk atau bukti bayar pengeluaran.";
-      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
+      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer, modelUsed);
 
       return NextResponse.json(
         {
@@ -248,7 +251,7 @@ export async function POST(request: Request) {
 
     if (parsed.extraction_confidence < 0.5) {
       const failReason = `Tingkat keyakinan hasil pembacaan struk terlalu rendah (${Math.round(parsed.extraction_confidence * 100)}% < 50%).`;
-      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
+      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer, modelUsed);
 
       return NextResponse.json(
         {
@@ -266,7 +269,7 @@ export async function POST(request: Request) {
     if (!amountVal || !Number.isSafeInteger(amountVal) || amountVal <= 0) {
       const failReason =
         parsed.warnings[0] || "Nominal total belanja tidak ditemukan pada struk.";
-      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer);
+      const uploadedUrl = await reportScanFailure(uid, failReason, imageBuffer, modelUsed);
 
       return NextResponse.json(
         {
@@ -299,7 +302,7 @@ export async function POST(request: Request) {
           success: false,
           errorReason: `Terdeteksi duplikat: ${failReason}`,
           method: "ai",
-          model: getActiveAiModel(),
+          model: parsed.model_used || getActiveAiModel(),
         });
 
         return NextResponse.json(
@@ -349,13 +352,16 @@ export async function POST(request: Request) {
 
     // 6. Notifikasi Telegram Sukses (dijalankan di background via after() agar tidak memblokir respon)
     const targetUid = uid;
+    const actualModel = parsed.model_used || getActiveAiModel();
+    const isFallback = Boolean(parsed.model_used && parsed.model_used !== getActiveAiModel());
+    const displayModel = isFallback ? `${parsed.model_used} (fallback)` : actualModel;
     after(async () => {
       if (!targetUid) return;
       try {
         await sendTelegramScanResult(targetUid, {
           success: true,
           method: "ai",
-          model: getActiveAiModel(),
+          model: displayModel,
           expense: {
             name,
             amount: amountVal,
@@ -378,6 +384,7 @@ export async function POST(request: Request) {
         expense_date: expenseDate,
         category_id: categoryId,
         confidence: parsed.extraction_confidence,
+        model: actualModel,
       },
     });
   })(),

@@ -14,6 +14,7 @@ export interface ExpenseNotificationData {
   category_id: string | null;
   source: "manual" | "scan";
   method?: "manual" | "ocr" | "ai" | null;
+  model?: string | null;
 }
 
 export interface TelegramSettingsDoc {
@@ -223,14 +224,20 @@ export async function sendTelegramNotificationForExpense(
       sourceLabel = "OCR";
     }
 
-    const messageHtml = [
+    const lines = [
       "💸 <b>Pengeluaran baru</b>",
       `Nama: ${escapeHtml(data.name)}`,
       `Nominal: ${escapeHtml(formatRupiah(data.amount))}`,
       `Tanggal: ${escapeHtml(formatDate(data.expense_date))}`,
       `Kategori: ${escapeHtml(categoryInfo.name)}`,
       `Sumber: ${sourceLabel}`,
-    ].join("\n");
+    ];
+
+    if (data.model) {
+      lines.push(`Model AI: <code>${escapeHtml(data.model)}</code>`);
+    }
+
+    const messageHtml = lines.join("\n");
 
     await sendTelegramMessage(token, settings.chat_id, messageHtml);
   } catch {
