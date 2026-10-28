@@ -243,6 +243,7 @@ export interface ScanNotificationOptions {
   errorReason?: string;
   imageUrl?: string | null;
   method?: "ocr" | "ai";
+  model?: string;
   expense?: {
     name: string;
     amount: number;
@@ -292,20 +293,31 @@ export async function sendTelegramScanResult(
           // Fallback
         }
       }
-      const sourceLabel = options.method === "ai" ? "AI" : "OCR";
-      messageHtml = [
+      const modelName = options.model || (options.method === "ai" ? (process.env.AI_MODEL || "gemini-2.5-flash") : null);
+      const lines = [
         "🧾 <b>Pencatatan Struk Berhasil!</b>",
         `Nama: <b>${escapeHtml(options.expense.name)}</b>`,
         `Nominal: <b>${escapeHtml(formatRupiah(options.expense.amount))}</b>`,
         `Tanggal: ${escapeHtml(formatDate(options.expense.expense_date))}`,
         `Kategori: ${escapeHtml(categoryInfo.name)}`,
-        `Sumber: <b>${sourceLabel}</b>`,
-      ].join("\n");
+        `Sumber: <b>${options.method === "ai" ? "AI" : "OCR"}</b>`,
+      ];
+
+      if (modelName) {
+        lines.push(`Model AI: <code>${escapeHtml(modelName)}</code>`);
+      }
+
+      messageHtml = lines.join("\n");
     } else {
+      const modelName = options.model || (options.method !== "ocr" ? (process.env.AI_MODEL || "gemini-2.5-flash") : null);
       const lines = [
         "⚠️ <b>Pencatatan Struk Gagal</b>",
         `Alasan: <b>${escapeHtml(options.errorReason || "Format struk tidak terbaca atau nominal tidak ditemukan")}</b>`,
       ];
+
+      if (modelName) {
+        lines.push(`Model AI: <code>${escapeHtml(modelName)}</code>`);
+      }
 
       if (options.imageUrl) {
         lines.push(`🖼️ <b>Foto:</b> <a href="${escapeHtml(options.imageUrl)}">${escapeHtml(options.imageUrl)}</a>`);

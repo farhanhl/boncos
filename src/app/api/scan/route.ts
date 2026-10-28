@@ -7,7 +7,7 @@ import { getUidByIngestionKey } from "@/actions/ingestion";
 import { sendTelegramScanResult } from "@/lib/telegram";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
-import { extractReceiptWithGemini } from "@/lib/extract/gemini";
+import { extractReceiptWithGemini, getActiveAiModel } from "@/lib/extract/gemini";
 import type { ExtractionResult } from "@/lib/extract/types";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +53,8 @@ async function reportScanFailure(
     success: false,
     errorReason: failReason,
     imageUrl: uploadedUrl,
+    method: "ai",
+    model: getActiveAiModel(),
   });
   return uploadedUrl;
 }
@@ -134,6 +136,8 @@ export async function POST(request: Request) {
       await sendTelegramScanResult(uid, {
         success: false,
         errorReason: failReason,
+        method: "ai",
+        model: getActiveAiModel(),
       });
 
       return NextResponse.json(
@@ -151,6 +155,8 @@ export async function POST(request: Request) {
       await sendTelegramScanResult(uid, {
         success: false,
         errorReason: failReason,
+        method: "ai",
+        model: getActiveAiModel(),
       });
 
       return NextResponse.json(
@@ -282,6 +288,7 @@ export async function POST(request: Request) {
         await sendTelegramScanResult(targetUid, {
           success: true,
           method: "ai",
+          model: getActiveAiModel(),
           expense: {
             name,
             amount: amountVal,

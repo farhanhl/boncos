@@ -42,6 +42,13 @@ export function isAiExtractionEnabled(): boolean {
 export const isGeminiExtractionEnabled = isAiExtractionEnabled;
 
 /**
+ * Returns the configured AI model name, defaulting to "gemini-2.5-flash".
+ */
+export function getActiveAiModel(): string {
+  return (process.env.AI_MODEL || "").trim() || "gemini-2.5-flash";
+}
+
+/**
  * Normalizes date returned by AI into YYYY-MM-DD.
  * Handles ISO (YYYY-MM-DD), DD/MM/YYYY, DD-MM-YYYY, or two-digit years (DD/MM/YY).
  */
@@ -83,7 +90,7 @@ export async function extractReceiptWithGemini(
     throw new Error("AI_API_KEY belum dikonfigurasi di environment variable.");
   }
 
-  const model = process.env.AI_MODEL || "gemini-2.5-flash";
+  const model = getActiveAiModel();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   let processedBuffer = imageBuffer;

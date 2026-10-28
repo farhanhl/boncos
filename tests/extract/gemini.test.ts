@@ -3,6 +3,7 @@ import {
   isGeminiExtractionEnabled,
   extractReceiptWithGemini,
   normalizeExtractedDate,
+  getActiveAiModel,
 } from "@/lib/extract/gemini";
 
 describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
@@ -41,6 +42,18 @@ describe("Gemini Extraction Engine (lib/extract/gemini.ts)", () => {
       process.env.EXTRACTION_MODE = "ai";
       process.env.AI_API_KEY = "dummy-api-key";
       expect(isGeminiExtractionEnabled()).toBe(true);
+    });
+  });
+
+  describe("getActiveAiModel", () => {
+    it("returns gemini-2.5-flash by default when AI_MODEL is unset", () => {
+      delete process.env.AI_MODEL;
+      expect(getActiveAiModel()).toBe("gemini-2.5-flash");
+    });
+
+    it("returns trimmed AI_MODEL when provided", () => {
+      process.env.AI_MODEL = "  gemini-1.5-pro  ";
+      expect(getActiveAiModel()).toBe("gemini-1.5-pro");
     });
   });
 
