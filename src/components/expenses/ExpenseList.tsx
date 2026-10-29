@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useTransition } from "react";
 import Link from "next/link";
 import {
   PiForkKnifeBold,
@@ -20,16 +20,20 @@ import {
   PiCaretLeftBold,
   PiCaretRightBold,
   PiTagBold,
+  PiSpinnerGapBold,
 } from "react-icons/pi";
 import { formatRupiah } from "@/lib/money";
 import { formatDate, formatTime } from "@/lib/date";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { DEFAULT_CATEGORY_LIST, getCategoryById } from "@/lib/categories";
+import { listExpenses } from "@/actions/expenses";
 import type { CustomCategoryRecord } from "@/actions/categories";
 import type { ExpenseRecord } from "@/types/expense";
 
 interface ExpenseListProps {
   initialExpenses: ExpenseRecord[];
+  initialTotalAmount?: number;
+  initialTotalCount?: number;
   customCategories?: CustomCategoryRecord[];
 }
 
@@ -65,9 +69,17 @@ type QuickDatePreset = "all" | "today" | "week" | "month" | "last_month";
 
 export function ExpenseList({
   initialExpenses,
+  initialTotalAmount,
+  initialTotalCount,
   customCategories = [],
 }: ExpenseListProps) {
-  const [expenses] = useState<ExpenseRecord[]>(initialExpenses);
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>(initialExpenses);
+  const [totalAmount, setTotalAmount] = useState<number>(
+    initialTotalAmount ?? initialExpenses.reduce((acc, curr) => acc + curr.amount, 0)
+  );
+  const [totalCount, setTotalCount] = useState<number>(
+    initialTotalCount ?? initialExpenses.length
+  );
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [fromDate, setFromDate] = useState<string>("");
@@ -75,6 +87,7 @@ export function ExpenseList({
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [prevFilterKey, setPrevFilterKey] = useState<string>("");
+  const [isPending, startTransition] = useTransition();
   const listTopRef = useRef<HTMLDivElement>(null);
 
   const currentFilterKey = `${filterCategory}|${searchQuery}|${fromDate}|${toDate}|${pageSize}`;
@@ -83,31 +96,55 @@ export function ExpenseList({
     setCurrentPage(1);
   }
 
+  const fetchFilteredExpenses = (newFrom: string, newTo: string, newCategory: string) => {
+    startTransition(async () => {
+      const res = await listExpenses({
+        from: newFrom || undefined,
+        to: newTo || undefined,
+        category_id: newCategory || undefined,
+        limit: 100,
+      });
+      if (res.ok && res.data) {
+        setExpenses(res.data.expenses);
+        setTotalAmount(
+          res.data.totalAmount ??
+            res.data.expenses.reduce((acc, curr) => acc + curr.amount, 0)
+        );
+        setTotalCount(res.data.totalCount ?? res.data.expenses.length);
+      }
+    });
+  };
+
   const handleSelectPreset = (preset: QuickDatePreset) => {
     const now = new Date();
+    let newFrom = "";
+    let newTo = "";
     if (preset === "all") {
-      setFromDate("");
-      setToDate("");
+      newFrom = "";
+      newTo = "";
     } else if (preset === "today") {
       const todayStr = toLocalDateString(now);
-      setFromDate(todayStr);
-      setToDate(todayStr);
+      newFrom = todayStr;
+      newTo = todayStr;
     } else if (preset === "week") {
       const past = new Date(now);
       past.setDate(now.getDate() - 6);
-      setFromDate(toLocalDateString(past));
-      setToDate(toLocalDateString(now));
+      newFrom = toLocalDateString(past);
+      newTo = toLocalDateString(now);
     } else if (preset === "month") {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      setFromDate(toLocalDateString(start));
-      setToDate(toLocalDateString(end));
+      newFrom = toLocalDateString(start);
+      newTo = toLocalDateString(end);
     } else if (preset === "last_month") {
       const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const end = new Date(now.getFullYear(), now.getMonth(), 0);
-      setFromDate(toLocalDateString(start));
-      setToDate(toLocalDateString(end));
+      newFrom = toLocalDateString(start);
+      newTo = toLocalDateString(end);
     }
+    setFromDate(newFrom);
+    setToDate(newTo);
+    fetchFilteredExpenses(newFrom, newTo, filterCategory);
   };
 
   const getActivePreset = (): QuickDatePreset | "custom" => {
@@ -266,8 +303,8 @@ export function ExpenseList({
             type="button"
             onClick={() => handleSelectPreset("all")}
             className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "all"
-                ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
-                : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
+              ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
+              : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
               }`}
           >
             Semua
@@ -276,8 +313,8 @@ export function ExpenseList({
             type="button"
             onClick={() => handleSelectPreset("today")}
             className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "today"
-                ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
-                : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
+              ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
+              : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
               }`}
           >
             Hari Ini
@@ -286,8 +323,8 @@ export function ExpenseList({
             type="button"
             onClick={() => handleSelectPreset("week")}
             className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "week"
-                ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
-                : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
+              ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
+              : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
               }`}
           >
             7 Hari Terakhir
@@ -296,8 +333,8 @@ export function ExpenseList({
             type="button"
             onClick={() => handleSelectPreset("month")}
             className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "month"
-                ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
-                : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
+              ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
+              : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
               }`}
           >
             Bulan Ini
@@ -306,8 +343,8 @@ export function ExpenseList({
             type="button"
             onClick={() => handleSelectPreset("last_month")}
             className={`px-3 py-1 rounded-full border-2 text-xs font-bold transition-all shrink-0 cursor-pointer ${activePreset === "last_month"
-                ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
-                : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
+              ? "bg-kuning text-karbon border-karbon shadow-hard-sm"
+              : "bg-karbon/40 text-tinta border-tinta/40 hover:border-tinta hover:bg-karbon/70"
               }`}
           >
             Bulan Lalu
@@ -331,7 +368,11 @@ export function ExpenseList({
           {/* Category Filter (Full width on mobile, auto on desktop) */}
           <select
             value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
+            onChange={(e) => {
+              const newCat = e.target.value;
+              setFilterCategory(newCat);
+              fetchFilteredExpenses(fromDate, toDate, newCat);
+            }}
             className="w-full sm:w-auto bg-kertas border-2 border-tinta rounded-md min-h-11 px-3 text-tinta focus:ring-0 focus:shadow-[3px_3px_0_0_var(--pulpen)] text-sm cursor-pointer"
           >
             <option value="">Semua Kategori</option>
@@ -357,14 +398,20 @@ export function ExpenseList({
           <div className="flex items-center gap-1.5 w-full sm:w-auto">
             <DatePickerField
               value={fromDate}
-              onChange={setFromDate}
+              onChange={(newFrom) => {
+                setFromDate(newFrom);
+                fetchFilteredExpenses(newFrom, toDate, filterCategory);
+              }}
               title="Dari tanggal"
               placeholder="dd/mm/yyyy"
             />
             <span className="text-tinta-pudar text-xs font-bold shrink-0">-</span>
             <DatePickerField
               value={toDate}
-              onChange={setToDate}
+              onChange={(newTo) => {
+                setToDate(newTo);
+                fetchFilteredExpenses(fromDate, newTo, filterCategory);
+              }}
               title="Sampai tanggal"
               placeholder="dd/mm/yyyy"
             />
@@ -379,6 +426,7 @@ export function ExpenseList({
                 setFilterCategory("");
                 setFromDate("");
                 setToDate("");
+                fetchFilteredExpenses("", "", "");
               }}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 min-h-11 bg-stempel text-white font-bold text-xs rounded-md border-2 border-karbon shadow-hard-sm hover:brightness-110 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer shrink-0"
               title="Reset semua filter pencarian"
@@ -391,16 +439,23 @@ export function ExpenseList({
       </div>
 
       {/* Quick Summary Pill for Filtered Expenses (Per Hari & Per Minggu) */}
-      {filteredExpenses.length > 0 && (
+      {(filteredExpenses.length > 0 || totalCount > 0) && (
         <div className="flex flex-wrap items-center justify-between gap-3 bg-karbon/50 border-2 border-tinta/20 rounded-lg px-4 py-2.5 text-xs">
           <div className="flex items-center gap-2 font-bold text-tinta">
             <span className="text-tinta-pudar">Total Terpilih:</span>
             <span className="text-kuning tabular-nums text-sm font-display">
-              {formatRupiah(filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0))}
+              {formatRupiah(
+                searchQuery
+                  ? filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0)
+                  : totalAmount
+              )}
             </span>
             <span className="text-tinta-pudar font-normal">
-              ({filteredExpenses.length} transaksi)
+              ({searchQuery ? filteredExpenses.length : totalCount} transaksi)
             </span>
+            {isPending && (
+              <PiSpinnerGapBold className="animate-spin text-kuning text-sm ml-1" />
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-tinta-pudar font-semibold">
@@ -409,7 +464,9 @@ export function ExpenseList({
               <span className="text-tinta font-bold tabular-nums">
                 {formatRupiah(
                   Math.round(
-                    filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0) /
+                    (searchQuery
+                      ? filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0)
+                      : totalAmount) /
                       Math.max(1, new Set(filteredExpenses.map((e) => e.expense_date)).size)
                   )
                 )}
@@ -420,7 +477,9 @@ export function ExpenseList({
               <span className="text-tinta font-bold tabular-nums">
                 {formatRupiah(
                   Math.round(
-                    filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0) /
+                    (searchQuery
+                      ? filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0)
+                      : totalAmount) /
                       Math.max(
                         1,
                         Math.ceil(new Set(filteredExpenses.map((e) => e.expense_date)).size / 7)
@@ -525,7 +584,10 @@ export function ExpenseList({
                   <span>
                     Menampilkan <span className="font-bold text-tinta">{startIndex + 1}</span>-
                     <span className="font-bold text-tinta">{endIndex}</span> dari{" "}
-                    <span className="font-bold text-tinta">{filteredExpenses.length}</span> pengeluaran
+                    <span className="font-bold text-tinta">
+                      {searchQuery ? filteredExpenses.length : totalCount}
+                    </span>{" "}
+                    pengeluaran
                   </span>
                   <div className="flex items-center gap-1.5 pl-2 sm:border-l sm:border-tinta/30">
                     <span className="hidden sm:inline">Per hal:</span>
@@ -562,8 +624,8 @@ export function ExpenseList({
                           type="button"
                           onClick={() => handlePageChange(p)}
                           className={`w-9 h-9 flex items-center justify-center text-xs font-bold rounded-md border-2 transition-all cursor-pointer ${p === safePage
-                              ? "bg-kuning text-karbon border-karbon shadow-hard-sm font-extrabold"
-                              : "bg-kertas text-tinta border-tinta hover:bg-karbon/40"
+                            ? "bg-kuning text-karbon border-karbon shadow-hard-sm font-extrabold"
+                            : "bg-kertas text-tinta border-tinta hover:bg-karbon/40"
                             }`}
                         >
                           {p}

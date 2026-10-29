@@ -29,7 +29,7 @@ export const listExpensesSchema = z.object({
   category_id: z.string().optional(),
   q: z.string().optional(),
   cursor: z.string().optional(),
-  limit: z.number().int().min(1).max(50).default(20),
+  limit: z.number().int().min(1).max(200).default(50),
 });
 
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;

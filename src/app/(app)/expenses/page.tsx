@@ -10,15 +10,23 @@ export const metadata = {
 
 export default async function ExpensesPage() {
   const [result, catRes] = await Promise.all([
-    listExpenses({ limit: 50 }),
+    listExpenses({ limit: 100 }),
     listCustomCategories(),
   ]);
   const expenses = result.ok && result.data ? result.data.expenses : [];
+  const totalAmount = result.ok && result.data ? result.data.totalAmount ?? 0 : 0;
+  const totalCount =
+    result.ok && result.data ? result.data.totalCount ?? expenses.length : expenses.length;
   const customCategories = catRes.ok && catRes.data ? catRes.data : [];
 
   return (
     <main>
-      <ExpenseList initialExpenses={expenses} customCategories={customCategories} />
+      <ExpenseList
+        initialExpenses={expenses}
+        initialTotalAmount={totalAmount}
+        initialTotalCount={totalCount}
+        customCategories={customCategories}
+      />
     </main>
   );
 }

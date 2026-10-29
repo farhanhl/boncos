@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, AggregateField } from "firebase-admin/firestore";
 import { getCurrentUser } from "@/lib/firebase/session";
 import { userCol } from "@/lib/firebase/admin";
 import {
@@ -295,7 +295,14 @@ export async function deleteExpense(id: string): Promise<ActionResult> {
 
 export async function listExpenses(
   rawInput: ListExpensesInput = {}
-): Promise<ActionResult<{ expenses: ExpenseRecord[]; nextCursor?: string }>> {
+): Promise<
+  ActionResult<{
+    expenses: ExpenseRecord[];
+    totalAmount?: number;
+    totalCount?: number;
+    nextCursor?: string;
+  }>
+> {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -308,28 +315,46 @@ export async function listExpenses(
     }
 
     const { from, to, category_id, q, limit } = parsed.data;
-    let query: FirebaseFirestore.Query = userCol(user.uid, "expenses");
+    let baseQuery: FirebaseFirestore.Query = userCol(user.uid, "expenses");
 
     if (category_id) {
-      query = query.where("category_id", "==", category_id);
+      baseQuery = baseQuery.where("category_id", "==", category_id);
     }
 
     if (from && to) {
-      query = query
+      baseQuery = baseQuery
         .where("expense_date", ">=", from)
-        .where("expense_date", "<=", to)
-        .orderBy("expense_date", "desc");
+        .where("expense_date", "<=", to);
     } else if (from) {
-      query = query.where("expense_date", ">=", from).orderBy("expense_date", "desc");
+      baseQuery = baseQuery.where("expense_date", ">=", from);
     } else if (to) {
-      query = query.where("expense_date", "<=", to).orderBy("expense_date", "desc");
-    } else {
-      query = query.orderBy("expense_date", "desc");
+      baseQuery = baseQuery.where("expense_date", "<=", to);
     }
 
-    query = query.limit(limit);
+    // Execute aggregation query on baseQuery (before ordering and limit) for 100% accurate totals & counts
+    let aggPromise: Promise<FirebaseFirestore.AggregateQuerySnapshot<{
+      totalAmount: FirebaseFirestore.AggregateField<number>;
+      totalCount: FirebaseFirestore.AggregateField<number>;
+    }>> | null = null;
 
-    const snapshot = await query.get();
+    try {
+      if (typeof baseQuery.aggregate === "function") {
+        aggPromise = baseQuery.aggregate({
+          totalAmount: AggregateField.sum("amount"),
+          totalCount: AggregateField.count(),
+        }).get();
+      }
+    } catch {
+      aggPromise = null;
+    }
+
+    const listQuery = baseQuery.orderBy("expense_date", "desc").limit(limit);
+
+    const [aggregateSnap, snapshot] = await Promise.all([
+      aggPromise ? aggPromise.catch(() => null) : Promise.resolve(null),
+      listQuery.get(),
+    ]);
+
     let records: ExpenseRecord[] = snapshot.docs.map((doc) => {
       const d = doc.data();
       return {
@@ -356,13 +381,34 @@ export async function listExpenses(
       return (b.created_at || "").localeCompare(a.created_at || "");
     });
 
+    let totalAmount = 0;
+    let totalCount = 0;
+
+    if (aggregateSnap && typeof aggregateSnap.data === "function") {
+      const aggData = aggregateSnap.data();
+      totalAmount = Math.round(aggData.totalAmount ?? 0);
+      totalCount = aggData.totalCount ?? 0;
+    } else {
+      totalAmount = records.reduce((acc, curr) => acc + curr.amount, 0);
+      totalCount = records.length;
+    }
+
     // In-memory prefix filter if q provided (v1 prefix search)
     if (q && q.trim()) {
       const qLower = q.trim().toLowerCase();
       records = records.filter((r) => r.name_lower.includes(qLower));
+      totalAmount = records.reduce((acc, curr) => acc + curr.amount, 0);
+      totalCount = records.length;
     }
 
-    return { ok: true, data: { expenses: records } };
+    return {
+      ok: true,
+      data: {
+        expenses: records,
+        totalAmount,
+        totalCount,
+      },
+    };
   } catch {
     return {
       ok: false,

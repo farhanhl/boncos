@@ -16,7 +16,7 @@ Semua endpoint (kecuali `/api/auth/session`) memerlukan session cookie valid. `u
 | `createExpense` | `{ name, amount, currency, expense_date, category_id?, note?, source: 'manual'\|'scan', extraction_confidence? }` | Validasi Zod; `extraction_confidence` hanya diterima bila `source = 'scan'` (0–1); isi `month`, `name_lower`, timestamp di server. Setelah sukses, jadwalkan `notifyTelegram()` via `after()` |
 | `updateExpense` | `{ id, ...fields }` | Hanya dokumen di bawah `users/{uid}` |
 | `deleteExpense` | `{ id }` | Hapus dokumen |
-| `listExpenses` | `{ from?, to?, category_id?, q?, cursor?, limit? }` | Pagination `startAfter`; `q` = prefix search nama |
+| `listExpenses` | `{ from?, to?, category_id?, q?, cursor?, limit? }` | Mengembalikan `{ expenses, totalAmount, totalCount }` dengan agregasi Firestore `sum` & `count`; `q` = prefix search nama |
 | `getDashboardSummary` | `{ month: 'YYYY-MM' }` | Total (aggregation `sum`), bulan lalu, breakdown kategori, hari pengeluaran terbesar (`peakSpendingDay`), pengeluaran per hari (`dailySpending`), pengeluaran per minggu (`weeklySpending`) |
 | `createCategory` / `updateCategory` / `deleteCategory` | | Hanya kategori custom |
 | `getTelegramSettings` | — | Mengembalikan `{ enabled, chat_id, bot_token_hint }`, **tanpa token** |
