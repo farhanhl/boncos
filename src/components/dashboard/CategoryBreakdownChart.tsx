@@ -79,8 +79,9 @@ export function CategoryBreakdownChart({
     );
   }
 
-  const topItems = items.slice(0, 4);
-  const remainingItems = items.slice(4);
+  const INITIAL_COUNT = 5;
+  const hasMore = items.length > INITIAL_COUNT;
+  const displayedItems = isExpanded ? items : items.slice(0, INITIAL_COUNT);
 
   const activeItem = activeIndex !== null && items[activeIndex] ? items[activeIndex] : null;
 
@@ -185,11 +186,14 @@ export function CategoryBreakdownChart({
         </div>
       </div>
 
-      {/* Compact Categories List */}
+      {/* Categories List */}
       <div className="pt-2 border-t-2 border-dashed border-tinta/20 space-y-2">
-        {/* Top 4 Categories */}
-        <div className="space-y-1.5 divide-y divide-dashed divide-tinta/10">
-          {topItems.map((cat, idx) => {
+        <div
+          className={`space-y-1.5 divide-y divide-dashed divide-tinta/10 ${
+            isExpanded ? "max-h-60 overflow-y-auto pr-1.5" : ""
+          }`}
+        >
+          {displayedItems.map((cat, idx) => {
             const percentage = total > 0 ? Math.round((cat.total / total) * 100) : 0;
             const isHovered = activeIndex === idx;
 
@@ -227,68 +231,23 @@ export function CategoryBreakdownChart({
           })}
         </div>
 
-        {/* Remaining Categories (Collapsed or Expanded in Scrollable View) */}
-        {remainingItems.length > 0 && (
-          <div className="space-y-2 pt-1">
-            {isExpanded && (
-              <div className="max-h-48 overflow-y-auto pr-1 space-y-1.5 divide-y divide-dashed divide-tinta/10 border-t border-dashed border-tinta/20 pt-1.5">
-                {remainingItems.map((cat, rIdx) => {
-                  const actualIdx = rIdx + 4;
-                  const percentage = total > 0 ? Math.round((cat.total / total) * 100) : 0;
-                  const isHovered = activeIndex === actualIdx;
-
-                  return (
-                    <div
-                      key={cat.categoryId}
-                      onMouseEnter={() => setActiveIndex(actualIdx)}
-                      onMouseLeave={() => setActiveIndex(null)}
-                      className={`pt-1.5 first:pt-0 flex items-center justify-between text-xs py-1 px-1.5 rounded transition-colors cursor-pointer ${
-                        isHovered ? "bg-karbon/80 border border-tinta/30" : "hover:bg-karbon/40"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-                        <span
-                          style={{ backgroundColor: cat.color }}
-                          className="w-5 h-5 rounded-md border border-tinta flex items-center justify-center text-karbon shrink-0"
-                        >
-                          {renderCategoryIcon(cat.iconName)}
-                        </span>
-                        <span className={`font-bold truncate ${isHovered ? "text-kuning" : "text-tinta"}`}>
-                          {cat.name}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[10px] font-bold text-tinta-pudar bg-karbon/60 px-1.5 py-0.5 rounded border border-tinta/10">
-                          {percentage}%
-                        </span>
-                        <span className="font-bold tabular-nums text-tinta text-xs">
-                          {formatRupiah(cat.total)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="w-full py-1.5 px-3 bg-karbon/40 hover:bg-karbon/70 border border-dashed border-tinta/30 rounded-md text-xs font-bold text-kuning flex items-center justify-center gap-1.5 transition-colors cursor-pointer mt-1"
+          >
+            <span>
+              {isExpanded
+                ? "Tampilkan Lebih Sedikit"
+                : `Lihat Semua (${items.length} Kategori)`}
+            </span>
+            {isExpanded ? (
+              <PiCaretUpBold className="w-3.5 h-3.5" />
+            ) : (
+              <PiCaretDownBold className="w-3.5 h-3.5" />
             )}
-
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full py-1.5 px-3 bg-karbon/40 hover:bg-karbon/70 border border-dashed border-tinta/30 rounded-md text-xs font-bold text-kuning flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <span>
-                {isExpanded
-                  ? "Sembunyikan Kategori Lainnya"
-                  : `Lihat ${remainingItems.length} Kategori Lainnya`}
-              </span>
-              {isExpanded ? (
-                <PiCaretUpBold className="w-3.5 h-3.5" />
-              ) : (
-                <PiCaretDownBold className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </div>
+          </button>
         )}
       </div>
     </div>
