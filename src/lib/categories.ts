@@ -1,5 +1,6 @@
 export type DefaultCategorySlug =
   | "food"
+  | "jajan"
   | "transport"
   | "shopping"
   | "bills"
@@ -22,6 +23,12 @@ export const DEFAULT_CATEGORIES: Record<DefaultCategorySlug, CategoryInfo> = {
     name: "Makanan & Minuman",
     color: "#FF9F45",
     iconName: "PiForkKnifeBold",
+  },
+  jajan: {
+    id: "jajan",
+    name: "Jajan",
+    color: "#FFB020",
+    iconName: "PiCookieBold",
   },
   transport: {
     id: "transport",
@@ -88,6 +95,7 @@ export function getCategoryById(
   customCategories?: CustomCategoryLike[]
 ): CategoryInfo {
   if (!id) return DEFAULT_CATEGORIES.other;
+  if (id === "snack") return DEFAULT_CATEGORIES.jajan;
   if (id in DEFAULT_CATEGORIES) {
     return DEFAULT_CATEGORIES[id as DefaultCategorySlug];
   }

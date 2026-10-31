@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { DEFAULT_CATEGORY_LIST } from "@/lib/categories";
+import { DEFAULT_CATEGORY_LIST, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { parseRupiahInput } from "@/lib/money";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { createExpense } from "@/actions/expenses";
@@ -41,7 +41,9 @@ export function ReviewForm({
     }
   }, [customCategories]);
 
-  const customCats = customCategories || fetchedCategories;
+  const customCats = (customCategories || fetchedCategories).filter(
+    (c) => !(c.id in DEFAULT_CATEGORIES)
+  );
 
   // Local object URL for client-only preview (never uploaded)
   const previewUrl = useMemo(() => {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { DEFAULT_CATEGORY_LIST } from "@/lib/categories";
+import { DEFAULT_CATEGORY_LIST, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { formatRupiah, parseRupiahInput } from "@/lib/money";
 import { formatDate, formatTime } from "@/lib/date";
 import { DatePickerField } from "@/components/ui/DatePickerField";
@@ -43,7 +43,9 @@ export function ExpenseForm({
     }
   }, [customCategories]);
 
-  const customCats = customCategories || fetchedCategories;
+  const customCats = (customCategories || fetchedCategories).filter(
+    (c) => !(c.id in DEFAULT_CATEGORIES)
+  );
 
   const [name, setName] = useState(initialData?.name || "");
   const [amountStr, setAmountStr] = useState(

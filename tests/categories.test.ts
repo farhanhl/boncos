@@ -7,6 +7,15 @@ describe("Category Utility (lib/categories.ts)", () => {
     expect(food.name).toBe("Makanan & Minuman");
     expect(food.color).toBe("#FF9F45");
 
+    const jajan = getCategoryById("jajan");
+    expect(jajan.name).toBe("Jajan");
+    expect(jajan.color).toBe("#FFB020");
+    expect(jajan.iconName).toBe("PiCookieBold");
+
+    const snackAlias = getCategoryById("snack");
+    expect(snackAlias.id).toBe("jajan");
+    expect(snackAlias.name).toBe("Jajan");
+
     const bills = getCategoryById("bills");
     expect(bills.name).toBe("Tagihan");
   });

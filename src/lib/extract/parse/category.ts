@@ -85,6 +85,7 @@ export function extractCategorySuggestion(
 
   const scores: Record<CategorySlug, number> = {
     food: 0,
+    jajan: 0,
     transport: 0,
     shopping: 0,
     bills: 0,

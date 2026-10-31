@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import {
   PiForkKnifeBold,
+  PiCookieBold,
   PiCarBold,
   PiShoppingBagBold,
   PiReceiptBold,
@@ -34,6 +35,8 @@ function renderCategoryIcon(iconName?: string) {
   switch (iconName) {
     case "PiForkKnifeBold":
       return <PiForkKnifeBold className="w-3.5 h-3.5" />;
+    case "PiCookieBold":
+      return <PiCookieBold className="w-3.5 h-3.5" />;
     case "PiCarBold":
       return <PiCarBold className="w-3.5 h-3.5" />;
     case "PiShoppingBagBold":

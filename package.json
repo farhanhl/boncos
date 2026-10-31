@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "eval:extract": "npx tsx scripts/eval-extract.ts",
-    "test:training": "npx tsx scripts/test-training-ocr.ts"
+    "test:training": "npx tsx scripts/test-training-ocr.ts",
+    "seed:jajan": "npx tsx --env-file=.env scripts/seed-jajan-category.ts"
   },
   "engines": {
     "node": ">=24.22.1"

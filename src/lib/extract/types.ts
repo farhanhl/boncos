@@ -1,5 +1,6 @@
 export type CategorySlug =
   | "food"
+  | "jajan"
   | "transport"
   | "shopping"
   | "bills"

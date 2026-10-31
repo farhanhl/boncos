@@ -4,6 +4,7 @@ import { useState, useRef, useTransition } from "react";
 import Link from "next/link";
 import {
   PiForkKnifeBold,
+  PiCookieBold,
   PiCarBold,
   PiShoppingBagBold,
   PiReceiptBold,
@@ -200,6 +201,8 @@ export function ExpenseList({
     switch (iconName) {
       case "PiForkKnifeBold":
         return <PiForkKnifeBold className="text-xl" />;
+      case "PiCookieBold":
+        return <PiCookieBold className="text-xl" />;
       case "PiCarBold":
         return <PiCarBold className="text-xl" />;
       case "PiShoppingBagBold":

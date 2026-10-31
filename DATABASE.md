@@ -39,7 +39,7 @@ Tidak ada koleksi log ekstraksi atau rate limit: ekstraksi berjalan sepenuhnya d
 
 ### Kategori default
 Tidak disimpan di Firestore; konstanta di `src/lib/categories.ts` dengan id slug:
-`food` (Makanan & Minuman), `transport` (Transportasi), `shopping` (Belanja), `bills` (Tagihan), `entertainment` (Hiburan), `health` (Kesehatan), `education` (Pendidikan), `other` (Lainnya).
+`food` (Makanan & Minuman), `jajan` (Jajan), `transport` (Transportasi), `shopping` (Belanja), `bills` (Tagihan), `entertainment` (Hiburan), `health` (Kesehatan), `education` (Pendidikan), `other` (Lainnya).
 Kategori custom disimpan di `users/{uid}/categories`. `category_suggestion` dari parser memakai slug yang sama.
 
 ## Tipe Data

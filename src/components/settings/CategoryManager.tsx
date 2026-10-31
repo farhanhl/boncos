@@ -7,7 +7,7 @@ import {
   PiTrashBold,
   PiLockKeyBold,
 } from "react-icons/pi";
-import { DEFAULT_CATEGORY_LIST } from "@/lib/categories";
+import { DEFAULT_CATEGORY_LIST, DEFAULT_CATEGORIES } from "@/lib/categories";
 import {
   createCustomCategory,
   deleteCustomCategory,
@@ -16,6 +16,7 @@ import {
 
 const ALLOWED_COLORS = [
   "#FF9F45", // food
+  "#FFB020", // jajan
   "#6EC6FF", // transport
   "#FF7EB6", // shopping
   "#B9C0FF", // bills
@@ -33,7 +34,10 @@ interface CategoryManagerProps {
 export function CategoryManager({
   customCategories: initialCategories,
 }: CategoryManagerProps) {
-  const [categories, setCategories] = useState(initialCategories);
+  const defaultIds = new Set(Object.keys(DEFAULT_CATEGORIES));
+  const [categories, setCategories] = useState(
+    initialCategories.filter((c) => !defaultIds.has(c.id))
+  );
   const [name, setName] = useState("");
   const [color, setColor] = useState(ALLOWED_COLORS[0] || "#FF9F45");
   const [submitting, setSubmitting] = useState(false);
