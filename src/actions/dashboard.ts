@@ -28,6 +28,7 @@ export interface CategorySummaryItem {
   categoryId: string;
   name: string;
   color: string;
+  iconName?: string;
   total: number;
   count: number;
 }
@@ -153,6 +154,7 @@ export async function getDashboardSummary(
           categoryId: catId,
           name: catInfo.name,
           color: catInfo.color,
+          iconName: catInfo.iconName,
           total: stats.total,
           count: stats.count,
         };

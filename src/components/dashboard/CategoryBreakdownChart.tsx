@@ -1,3 +1,27 @@
+"use client";
+
+import { useState, useSyncExternalStore } from "react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  PiForkKnifeBold,
+  PiCarBold,
+  PiShoppingBagBold,
+  PiReceiptBold,
+  PiGameControllerBold,
+  PiHeartbeatBold,
+  PiGraduationCapBold,
+  PiArrowsLeftRightBold,
+  PiTagBold,
+  PiDotsThreeOutlineBold,
+  PiCaretDownBold,
+  PiCaretUpBold,
+} from "react-icons/pi";
 import { formatRupiah, formatRupiahCompact } from "@/lib/money";
 import type { CategorySummaryItem } from "@/actions/dashboard";
 
@@ -6,10 +30,43 @@ interface CategoryBreakdownChartProps {
   total: number;
 }
 
+function renderCategoryIcon(iconName?: string) {
+  switch (iconName) {
+    case "PiForkKnifeBold":
+      return <PiForkKnifeBold className="w-3.5 h-3.5" />;
+    case "PiCarBold":
+      return <PiCarBold className="w-3.5 h-3.5" />;
+    case "PiShoppingBagBold":
+      return <PiShoppingBagBold className="w-3.5 h-3.5" />;
+    case "PiReceiptBold":
+      return <PiReceiptBold className="w-3.5 h-3.5" />;
+    case "PiGameControllerBold":
+      return <PiGameControllerBold className="w-3.5 h-3.5" />;
+    case "PiHeartbeatBold":
+      return <PiHeartbeatBold className="w-3.5 h-3.5" />;
+    case "PiGraduationCapBold":
+      return <PiGraduationCapBold className="w-3.5 h-3.5" />;
+    case "PiArrowsLeftRightBold":
+      return <PiArrowsLeftRightBold className="w-3.5 h-3.5" />;
+    case "PiTagBold":
+      return <PiTagBold className="w-3.5 h-3.5" />;
+    default:
+      return <PiDotsThreeOutlineBold className="w-3.5 h-3.5" />;
+  }
+}
+
 export function CategoryBreakdownChart({
   items,
   total,
 }: CategoryBreakdownChartProps) {
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
   if (items.length === 0) {
     return (
       <div className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard text-center space-y-2">
@@ -22,47 +79,217 @@ export function CategoryBreakdownChart({
     );
   }
 
-  const maxTotal = items[0]?.total || 1;
+  const topItems = items.slice(0, 4);
+  const remainingItems = items.slice(4);
+
+  const activeItem = activeIndex !== null && items[activeIndex] ? items[activeIndex] : null;
 
   return (
-    <div className="bg-kertas border-2 border-tinta rounded-[10px] p-6 shadow-hard space-y-4">
+    <div className="bg-kertas border-2 border-tinta rounded-[10px] p-5 sm:p-6 shadow-hard space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b-2 border-dashed border-tinta/30">
         <h3 className="font-display text-xl text-tinta">Per Kategori</h3>
-        <span className="text-xs font-bold text-tinta-pudar">
+        <span className="text-xs font-bold text-tinta-pudar bg-karbon/50 px-2 py-0.5 rounded-full border border-tinta/20">
           {items.length} Kategori
         </span>
       </div>
 
-      <div className="space-y-3">
-        {items.map((cat) => {
-          const percentage = total > 0 ? Math.round((cat.total / total) * 100) : 0;
-          const barWidthPercent = Math.max(12, Math.round((cat.total / maxTotal) * 100));
+      {/* Donut Chart Container */}
+      <div className="relative w-full h-[220px] flex items-center justify-center">
+        {mounted ? (
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length > 0) {
+                    const item = payload[0].payload as CategorySummaryItem;
+                    const percentage = total > 0 ? Math.round((item.total / total) * 100) : 0;
+                    return (
+                      <div className="bg-kuning text-karbon border-2 border-karbon rounded-md px-2.5 py-1.5 shadow-hard-sm pointer-events-none z-50">
+                        <div className="flex items-center gap-1.5 font-bold text-xs">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full border border-karbon shrink-0"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="truncate max-w-[140px]">{item.name}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 mt-1 pt-1 border-t border-karbon/20 text-xs">
+                          <span className="font-display text-sm">{formatRupiah(item.total)}</span>
+                          <span className="font-bold text-[11px] bg-karbon text-kuning px-1.5 py-0.2 rounded-xs">
+                            {percentage}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Pie
+                data={items}
+                dataKey="total"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={58}
+                outerRadius={84}
+                paddingAngle={items.length > 1 ? 3 : 0}
+                stroke="#010736"
+                strokeWidth={2}
+                onMouseEnter={(_, index) => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(null)}
+                cursor="pointer"
+              >
+                {items.map((cat, idx) => (
+                  <Cell
+                    key={cat.categoryId}
+                    fill={cat.color}
+                    className="transition-all duration-200 outline-none"
+                    opacity={activeIndex === null || activeIndex === idx ? 1 : 0.45}
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="w-[160px] h-[160px] rounded-full border-4 border-dashed border-tinta/20 animate-pulse flex items-center justify-center" />
+        )}
 
-          return (
-            <div key={cat.categoryId} className="space-y-1">
-              <div className="flex justify-between text-xs font-bold text-tinta">
-                <span>{cat.name}</span>
-                <span className="tabular-nums">
-                  {formatRupiah(cat.total)}{" "}
-                  <span className="text-tinta-pudar font-normal">({percentage}%)</span>
-                </span>
-              </div>
+        {/* Center Hole Content (HTML Typography) */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-center flex flex-col items-center justify-center w-24 select-none">
+          {activeItem ? (
+            <>
+              <span className="text-[10px] font-bold text-tinta-pudar uppercase truncate max-w-full px-1">
+                {activeItem.name}
+              </span>
+              <span className="font-display text-sm sm:text-base text-kuning tabular-nums leading-tight">
+                {formatRupiahCompact(activeItem.total)}
+              </span>
+              <span className="text-[10px] font-bold text-tinta-pudar mt-0.5">
+                {total > 0 ? `${Math.round((activeItem.total / total) * 100)}%` : "0%"}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-[10px] font-bold text-tinta-pudar uppercase">
+                Total
+              </span>
+              <span className="font-display text-sm sm:text-base text-tinta tabular-nums leading-tight">
+                {formatRupiahCompact(total)}
+              </span>
+              <span className="text-[10px] text-tinta-pudar font-semibold mt-0.5">
+                {items.length} Kategori
+              </span>
+            </>
+          )}
+        </div>
+      </div>
 
-              {/* Horizontal Bar (DESIGN.md 5.7: Batang tebal, warna solid kategori, border 2px tinta) */}
-              <div className="h-6 w-full bg-karbon/30 rounded-sm border-2 border-tinta/30 overflow-hidden flex items-center">
-                <div
-                  style={{
-                    width: `${barWidthPercent}%`,
-                    backgroundColor: cat.color,
-                  }}
-                  className="h-full border-r-2 border-tinta flex items-center px-2 text-[11px] font-bold text-karbon truncate transition-all duration-300"
-                >
-                  {formatRupiahCompact(cat.total)}
+      {/* Compact Categories List */}
+      <div className="pt-2 border-t-2 border-dashed border-tinta/20 space-y-2">
+        {/* Top 4 Categories */}
+        <div className="space-y-1.5 divide-y divide-dashed divide-tinta/10">
+          {topItems.map((cat, idx) => {
+            const percentage = total > 0 ? Math.round((cat.total / total) * 100) : 0;
+            const isHovered = activeIndex === idx;
+
+            return (
+              <div
+                key={cat.categoryId}
+                onMouseEnter={() => setActiveIndex(idx)}
+                onMouseLeave={() => setActiveIndex(null)}
+                className={`pt-1.5 first:pt-0 flex items-center justify-between text-xs py-1 px-1.5 rounded transition-colors cursor-pointer ${
+                  isHovered ? "bg-karbon/80 border border-tinta/30" : "hover:bg-karbon/40"
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                  <span
+                    style={{ backgroundColor: cat.color }}
+                    className="w-5 h-5 rounded-md border border-tinta flex items-center justify-center text-karbon shrink-0"
+                  >
+                    {renderCategoryIcon(cat.iconName)}
+                  </span>
+                  <span className={`font-bold truncate ${isHovered ? "text-kuning" : "text-tinta"}`}>
+                    {cat.name}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-bold text-tinta-pudar bg-karbon/60 px-1.5 py-0.5 rounded border border-tinta/10">
+                    {percentage}%
+                  </span>
+                  <span className="font-bold tabular-nums text-tinta text-xs">
+                    {formatRupiah(cat.total)}
+                  </span>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {/* Remaining Categories (Collapsed or Expanded in Scrollable View) */}
+        {remainingItems.length > 0 && (
+          <div className="space-y-2 pt-1">
+            {isExpanded && (
+              <div className="max-h-48 overflow-y-auto pr-1 space-y-1.5 divide-y divide-dashed divide-tinta/10 border-t border-dashed border-tinta/20 pt-1.5">
+                {remainingItems.map((cat, rIdx) => {
+                  const actualIdx = rIdx + 4;
+                  const percentage = total > 0 ? Math.round((cat.total / total) * 100) : 0;
+                  const isHovered = activeIndex === actualIdx;
+
+                  return (
+                    <div
+                      key={cat.categoryId}
+                      onMouseEnter={() => setActiveIndex(actualIdx)}
+                      onMouseLeave={() => setActiveIndex(null)}
+                      className={`pt-1.5 first:pt-0 flex items-center justify-between text-xs py-1 px-1.5 rounded transition-colors cursor-pointer ${
+                        isHovered ? "bg-karbon/80 border border-tinta/30" : "hover:bg-karbon/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                        <span
+                          style={{ backgroundColor: cat.color }}
+                          className="w-5 h-5 rounded-md border border-tinta flex items-center justify-center text-karbon shrink-0"
+                        >
+                          {renderCategoryIcon(cat.iconName)}
+                        </span>
+                        <span className={`font-bold truncate ${isHovered ? "text-kuning" : "text-tinta"}`}>
+                          {cat.name}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-bold text-tinta-pudar bg-karbon/60 px-1.5 py-0.5 rounded border border-tinta/10">
+                          {percentage}%
+                        </span>
+                        <span className="font-bold tabular-nums text-tinta text-xs">
+                          {formatRupiah(cat.total)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="w-full py-1.5 px-3 bg-karbon/40 hover:bg-karbon/70 border border-dashed border-tinta/30 rounded-md text-xs font-bold text-kuning flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span>
+                {isExpanded
+                  ? "Sembunyikan Kategori Lainnya"
+                  : `Lihat ${remainingItems.length} Kategori Lainnya`}
+              </span>
+              {isExpanded ? (
+                <PiCaretUpBold className="w-3.5 h-3.5" />
+              ) : (
+                <PiCaretDownBold className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
